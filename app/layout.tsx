@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./extra.css";
 import "./docs.css";
+import "./dash.css";
 
 export const metadata: Metadata = {
   title: "NexoSMS | SMS masivo para Paraguay",

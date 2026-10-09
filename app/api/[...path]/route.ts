@@ -188,7 +188,9 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const messages = await rows("SELECT * FROM messages WHERE user_id=? ORDER BY created_at DESC LIMIT 8", user.id);
     const stats = await first("SELECT COUNT(*) AS total, SUM(CASE WHEN status='aceptado' OR status='simulado' THEN 1 ELSE 0 END) AS sent, SUM(CASE WHEN status='fallido' THEN 1 ELSE 0 END) AS failed FROM messages WHERE user_id=?", user.id);
     const contacts = await first("SELECT COUNT(*) AS total FROM contacts WHERE user_id=?", user.id);
-    return json({ campaigns, messages, stats, contacts: (contacts as { total: number })?.total || 0, balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0 });
+    const since = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    const daily = await rows("SELECT substr(created_at,1,10) AS day, COUNT(*) AS n FROM messages WHERE user_id=? AND created_at>=? AND status IN ('aceptado','simulado') GROUP BY day", user.id, since);
+    return json({ campaigns, messages, stats, daily, contacts: (contacts as { total: number })?.total || 0, balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0 });
   }
   if (route === "contacts" && method === "GET") return json({ contacts: await rows("SELECT * FROM contacts WHERE user_id=? ORDER BY created_at DESC LIMIT 2000", user.id) });
   if (route === "contacts" && method === "POST") {
