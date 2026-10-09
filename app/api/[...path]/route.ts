@@ -99,7 +99,7 @@ async function runCampaign(user: User, campaignId: string, sendNow = false) {
   return { processed: pending.length, remaining: left?.n || 0, status: final?.status, sent: final?.sent, failed: final?.failed, total: final?.total };
 }
 
-const pricePerCredit = () => Number(config.PRICE_PER_CREDIT) || 150;
+const pricePerCredit = () => Number(config.PRICE_PER_CREDIT) || 130;
 const MIN_PURCHASE = 1000, MAX_PURCHASE = 5_000_000;
 type Order = { id: string; user_id: string; credits: number; price: number; payment_link_id: string; status: string };
 
@@ -122,6 +122,38 @@ async function verifyOrder(order: Order): Promise<"paid" | "pending"> {
   ]);
   return "paid";
 }
+
+const PY_OFFSET_MS = 3 * 3600_000; // Paraguay: UTC-3
+/** Rango de fechas en horario de Paraguay: desde 00:00 del día "from" hasta 24:00 del día "to". */
+function dateRange(col: string, p: { from?: string | null; to?: string | null }, where: string[], args: unknown[]) {
+  const ok = (v?: string | null) => v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  const from = ok(p.from), to = ok(p.to);
+  if (from) { where.push(`${col}>=?`); args.push(new Date(Date.parse(`${from}T00:00:00Z`) + PY_OFFSET_MS).toISOString()); }
+  if (to) { where.push(`${col}<?`); args.push(new Date(Date.parse(`${to}T00:00:00Z`) + 86400000 + PY_OFFSET_MS).toISOString()); }
+}
+const likeOf = (q: string) => `%${q.replace(/[%_\\]/g, "")}%`;
+const pageOf = (p: URLSearchParams, max = 200) => {
+  const size = Math.min(max, Math.max(1, Number(p.get("pageSize")) || 15)), page = Math.max(1, Number(p.get("page")) || 1);
+  return { size, page, offset: (page - 1) * size };
+};
+/** Filtro común de mensajes (reportes y borrado masivo). */
+function messageFilter(userId: string, p: URLSearchParams) {
+  const where = ["m.user_id=?"], args: unknown[] = [userId];
+  dateRange("m.created_at", { from: p.get("from"), to: p.get("to") }, where, args);
+  const campaign = p.get("campaign") || "", status = p.get("status") || "", q = (p.get("q") || "").trim().slice(0, 100);
+  if (campaign === "none") where.push("m.campaign_id IS NULL");
+  else if (campaign) { where.push("m.campaign_id=?"); args.push(campaign); }
+  if (status) { where.push("m.status=?"); args.push(status); }
+  if (q) {
+    const like = likeOf(q), digits = q.replace(/\D/g, "");
+    const phone = digits.length >= 3 ? `%${digits.startsWith("0") ? digits.slice(1) : digits}%` : null;
+    where.push(`(m.body LIKE ? OR m.error LIKE ? OR m.provider_id LIKE ? OR c.name LIKE ?${phone ? " OR m.phone LIKE ?" : ""})`);
+    args.push(like, like, like, like, ...(phone ? [phone] : []));
+  }
+  return { where: where.join(" AND "), args, from: "FROM messages m LEFT JOIN campaigns c ON c.id=m.campaign_id" };
+}
+const chunk = <T,>(arr: T[], n: number) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
+const idList = (v: unknown) => (Array.isArray(v) ? v : []).map(String).filter(Boolean).slice(0, 2000);
 
 async function runCampaignSafe(user: User, campaignId: string) {
   try { return await runCampaign(user, campaignId); }
@@ -244,6 +276,13 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     }
     return json({ added });
   }
+  if (route === "contacts/delete" && method === "POST") {
+    const data = await body(r);
+    if (data.all === true) { const res = await db().prepare("DELETE FROM contacts WHERE user_id=?").bind(user.id).run(); return json({ deleted: res.meta.changes || 0 }); }
+    let deleted = 0;
+    for (const part of chunk(idList(data.ids), 50)) deleted += (await db().prepare(`DELETE FROM contacts WHERE user_id=? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part).run()).meta.changes || 0;
+    return json({ deleted });
+  }
   if (path[0] === "contacts" && path[1] && method === "DELETE") {
     await db().prepare("DELETE FROM contacts WHERE id=? AND user_id=?").bind(path[1], user.id).run(); return json({ ok: true });
   }
@@ -314,6 +353,14 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     try { sendNow = (await r.json() as Dict).now === true; } catch { /* cuerpo vacío */ }
     return json(await runCampaign(user, path[1], sendNow));
   }
+  if (route === "campaigns/clear" && method === "POST") {
+    const ids = (await rows<{ id: string }>("SELECT id FROM campaigns WHERE user_id=? AND status IN ('completed','cancelled')", user.id)).map(c => c.id);
+    for (const part of chunk(ids, 50)) await db().batch([
+      db().prepare(`DELETE FROM recipients WHERE campaign_id IN (${part.map(() => "?").join(",")})`).bind(...part),
+      db().prepare(`DELETE FROM campaigns WHERE user_id=? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part),
+    ]);
+    return json({ deleted: ids.length });
+  }
   if (route === "campaigns/process" && method === "POST") {
     const due = await rows<{ id: string }>("SELECT id FROM campaigns WHERE user_id=? AND status IN ('scheduled','sending') AND (scheduled_at IS NULL OR scheduled_at<=?) ORDER BY created_at LIMIT 4", user.id, now());
     const results = [];
@@ -321,14 +368,62 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     return json({ results });
   }
   if (route === "reports" && method === "GET") {
-    const from = url.searchParams.get("from") || "0000-01-01";
-    const to = url.searchParams.get("to") ? `${url.searchParams.get("to")}T23:59:59.999Z` : "9999-12-31";
-    const campaign = url.searchParams.get("campaign") || "";
-    const status = url.searchParams.get("status") || "";
-    const messages = await rows("SELECT * FROM messages WHERE user_id=? AND created_at>=? AND created_at<=? AND (?='' OR campaign_id=?) AND (?='' OR status=?) ORDER BY created_at DESC LIMIT 1000", user.id, from, to, campaign, campaign, status, status);
-    return json({ messages });
+    const f = messageFilter(user.id, url.searchParams), pg = pageOf(url.searchParams, 5000);
+    const summary = await first<{ total: number; ok: number; failed: number; credits: number }>(`SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN m.status IN ('aceptado','simulado') THEN 1 ELSE 0 END),0) AS ok, COALESCE(SUM(CASE WHEN m.status='fallido' THEN 1 ELSE 0 END),0) AS failed, COALESCE(SUM(m.segments),0) AS credits ${f.from} WHERE ${f.where}`, ...f.args);
+    const messages = await rows(`SELECT m.*, c.name AS campaign_name ${f.from} WHERE ${f.where} ORDER BY m.created_at DESC LIMIT ? OFFSET ?`, ...f.args, pg.size, pg.offset);
+    return json({ messages, total: summary?.total || 0, page: pg.page, pageSize: pg.size, summary });
   }
-  if (route === "wallet" && method === "GET") return json({ balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0, ledger: await rows("SELECT * FROM ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user.id), orders: await rows("SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user.id), packages: await rows("SELECT * FROM packages WHERE active=1 ORDER BY credits"), pricePerCredit: pricePerCredit(), minPurchase: MIN_PURCHASE, maxPurchase: MAX_PURCHASE });
+  if (route === "reports/delete" && method === "POST") {
+    const data = await body(r);
+    if (data.all === true) {
+      const filters = data.filters && typeof data.filters === "object" ? data.filters as Record<string, string> : {};
+      const f = messageFilter(user.id, new URLSearchParams(Object.entries(filters).map(([k, v]) => [k, String(v ?? "")])));
+      const res = await db().prepare(`DELETE FROM messages WHERE id IN (SELECT m.id ${f.from} WHERE ${f.where})`).bind(...f.args).run();
+      return json({ deleted: res.meta.changes || 0 });
+    }
+    let deleted = 0;
+    for (const part of chunk(idList(data.ids), 50)) deleted += (await db().prepare(`DELETE FROM messages WHERE user_id=? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part).run()).meta.changes || 0;
+    return json({ deleted });
+  }
+  if (route === "wallet" && method === "GET") return json({ balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0, pendingOrders: (await first<{ n: number }>("SELECT COUNT(*) AS n FROM orders WHERE user_id=? AND status='pending'", user.id))?.n || 0, packages: await rows("SELECT * FROM packages WHERE active=1 ORDER BY credits"), pricePerCredit: pricePerCredit(), minPurchase: MIN_PURCHASE, maxPurchase: MAX_PURCHASE });
+  if (route === "wallet/ledger" && method === "GET") {
+    const p = url.searchParams, pg = pageOf(p), where = ["l.user_id=?"], args: unknown[] = [user.id];
+    dateRange("l.created_at", { from: p.get("from"), to: p.get("to") }, where, args);
+    if (p.get("type") === "in") where.push("l.delta>0"); else if (p.get("type") === "out") where.push("l.delta<0");
+    const q = (p.get("q") || "").trim().slice(0, 100);
+    if (q) { where.push("(l.reason LIKE ? OR c.name LIKE ?)"); args.push(likeOf(q), likeOf(q)); }
+    const from = "FROM ledger l LEFT JOIN campaigns c ON l.reason LIKE 'Campaña %' AND c.id=substr(l.reason,9)", w = where.join(" AND ");
+    const grouped = `SELECT MIN(l.id) AS id, MAX(l.created_at) AS created_at, SUM(l.delta) AS delta, COUNT(*) AS n, l.reason AS reason, MAX(c.name) AS campaign_name ${from} WHERE ${w} GROUP BY CASE WHEN l.reason LIKE 'Campaña %' THEN l.reason || substr(l.created_at,1,13) ELSE l.id END`;
+    const total = (await first<{ n: number }>(`SELECT COUNT(*) AS n FROM (${grouped})`, ...args))?.n || 0;
+    const entries = await rows(`SELECT * FROM (${grouped}) ORDER BY created_at DESC LIMIT ? OFFSET ?`, ...args, pg.size, pg.offset);
+    const sum = await first<{ credited: number; spent: number }>(`SELECT COALESCE(SUM(CASE WHEN l.delta>0 THEN l.delta END),0) AS credited, COALESCE(SUM(CASE WHEN l.delta<0 THEN -l.delta END),0) AS spent ${from} WHERE ${w}`, ...args);
+    return json({ entries, total, page: pg.page, pageSize: pg.size, summary: sum });
+  }
+  if (route === "wallet/ledger/clear" && method === "POST") {
+    const res = await db().prepare("DELETE FROM ledger WHERE user_id=?").bind(user.id).run();
+    return json({ deleted: res.meta.changes || 0 });
+  }
+  if (route === "orders" && method === "GET") {
+    const p = url.searchParams, pg = pageOf(p), where = ["user_id=?"], args: unknown[] = [user.id];
+    dateRange("created_at", { from: p.get("from"), to: p.get("to") }, where, args);
+    if (p.get("status")) { where.push("status=?"); args.push(p.get("status")); }
+    const q = (p.get("q") || "").trim().slice(0, 100);
+    if (q) { where.push("(id LIKE ? OR CAST(credits AS TEXT) LIKE ? OR CAST(price AS TEXT) LIKE ?)"); args.push(likeOf(q), likeOf(q), likeOf(q.replace(/\D/g, "") || q)); }
+    const w = where.join(" AND ");
+    const total = (await first<{ n: number }>(`SELECT COUNT(*) AS n FROM orders WHERE ${w}`, ...args))?.n || 0;
+    const orders = await rows(`SELECT * FROM orders WHERE ${w} ORDER BY created_at DESC LIMIT ? OFFSET ?`, ...args, pg.size, pg.offset);
+    const sum = await first<{ paid: number; credits: number }>(`SELECT COALESCE(SUM(CASE WHEN status='paid' THEN price END),0) AS paid, COALESCE(SUM(CASE WHEN status='paid' THEN credits END),0) AS credits FROM orders WHERE ${w}`, ...args);
+    return json({ orders, total, page: pg.page, pageSize: pg.size, summary: sum });
+  }
+  if (route === "orders/clear" && method === "POST") {
+    const res = await db().prepare("DELETE FROM orders WHERE user_id=? AND status<>'paid'").bind(user.id).run();
+    return json({ deleted: res.meta.changes || 0 });
+  }
+  if (path[0] === "orders" && path[1] && path.length === 2 && method === "DELETE") {
+    const res = await db().prepare("DELETE FROM orders WHERE id=? AND user_id=? AND status<>'paid'").bind(path[1], user.id).run();
+    if (!res.meta.changes) return err("Sólo se pueden eliminar compras no pagadas");
+    return json({ ok: true });
+  }
   if (route === "wallet/provider-balance" && method === "GET") {
     requireAdmin(user);
     if (!config.WINSAP_SMS_KEY) return err("Proveedor SMS no configurado", 503);
@@ -338,8 +433,11 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     if (config.PAYMENTS_LIVE !== "true" || !config.WINSAP_PAYMENTS_KEY) return err("Los pagos todavía no están activados", 503);
     await rateLimit(`orders:${user.id}`, 10, 3600);
     const data = await body(r);
-    const credits = Number(data.credits), price = credits * pricePerCredit();
-    if (!Number.isInteger(credits) || credits < 1) return err("Elegí una cantidad de créditos válida");
+    const unit = pricePerCredit();
+    const price = data.amount !== undefined ? Number(data.amount) : Number(data.credits) * unit;
+    if (!Number.isInteger(price) || price < 1) return err("Elegí un monto válido");
+    const credits = Math.floor(price / unit);
+    if (credits < 1) return err("El monto no alcanza para un crédito");
     if (price < MIN_PURCHASE) return err(`La compra mínima es de Gs. ${MIN_PURCHASE.toLocaleString("es-PY")}`);
     if (price > MAX_PURCHASE) return err(`La compra máxima es de Gs. ${MAX_PURCHASE.toLocaleString("es-PY")}`);
     const orderId = id();

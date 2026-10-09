@@ -79,6 +79,12 @@ export default function CampaignsView({ ask, flash, balance, onChanged, composeS
     } catch (e) { flash(errMsg(e)); }
   }
 
+  async function clearFinished() {
+    const n = (counts.completed || 0) + (counts.cancelled || 0);
+    if (!await ask({ title: "Eliminar campañas finalizadas", message: `Se eliminan ${fmt(n)} campaña(s) completadas o canceladas con su lista de destinatarios. El historial de mensajes se conserva en Reportes.`, confirmLabel: "Eliminar finalizadas", danger: true })) return;
+    try { const d = await request("campaigns/clear", "POST"); flash(`${fmt(d.deleted)} campañas eliminadas`); } catch (e) { flash(errMsg(e)); }
+    load();
+  }
   const counts = useMemo(() => { const m: Record<string, number> = { all: list.length }; for (const c of list) m[c.status] = (m[c.status] || 0) + 1; return m; }, [list]);
   const shown = useMemo(() => {
     const q = query.toLowerCase();
@@ -90,7 +96,7 @@ export default function CampaignsView({ ask, flash, balance, onChanged, composeS
   const filtered = filter !== "all" || query || from || to;
 
   return <div className="cx">
-    <div className="dx-head"><div><span className="dx-eyebrow">Mensajes a escala</span><h1>Campañas</h1><p>Creá, programá, detené y seguí cada envío.</p></div><div className="dx-head-actions"><button className="dx-btn" onClick={() => setWizard({ name: "", body: "", rows: null })}><Plus size={16} /> Nueva campaña</button></div></div>
+    <div className="dx-head"><div><span className="dx-eyebrow">Mensajes a escala</span><h1>Campañas</h1><p>Creá, programá, detené y seguí cada envío.</p></div><div className="dx-head-actions"><button className="dx-btn danger" disabled={!(counts.completed||counts.cancelled)} onClick={clearFinished}><Trash2 size={16} /> Eliminar finalizadas</button><button className="dx-btn" onClick={() => setWizard({ name: "", body: "", rows: null })}><Plus size={16} /> Nueva campaña</button></div></div>
 
     <div className="cx-summary"><div><small>Campañas</small><strong>{fmt(list.length)}</strong></div><div><small>En curso</small><strong>{fmt(counts.sending || 0)}</strong></div><div><small>Programadas</small><strong>{fmt(counts.scheduled || 0)}</strong></div><div><small>Mensajes enviados</small><strong>{fmt(list.reduce((a, c) => a + c.sent, 0))}</strong></div></div>
 
