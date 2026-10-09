@@ -46,7 +46,7 @@ async function sendOne(user: User, rawPhone: unknown, rawMessage: unknown, campa
       db().prepare("UPDATE users SET balance=balance+? WHERE id=?").bind(cost, user.id),
       db().prepare("UPDATE messages SET status='fallido',error=? WHERE id=?").bind(e instanceof Error ? e.message.slice(0, 250) : "Error", messageId),
     ]);
-    throw e;
+    throw new HttpError(`El proveedor de SMS rechazó el envío: ${e instanceof Error ? e.message.slice(0, 200) : "error desconocido"}`, 502);
   }
   await db().batch([
     db().prepare("UPDATE messages SET status=?,provider_id=? WHERE id=?").bind(status, providerId, messageId),
