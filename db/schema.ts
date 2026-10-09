@@ -2,7 +2,7 @@ import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqli
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(), name: text("name").notNull(), email: text("email").notNull().unique(),
-  passwordHash: text("password_hash"), passwordSalt: text("password_salt"), googleSub: text("google_sub").unique(),
+  passwordHash: text("password_hash"), passwordSalt: text("password_salt"), googleSub: text("google_sub").unique(), avatarUrl: text("avatar_url"),
   role: text("role").notNull().default("user"), status: text("status").notNull().default("active"),
   balance: integer("balance").notNull().default(0), createdAt: text("created_at").notNull(),
 });

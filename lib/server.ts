@@ -19,8 +19,8 @@ export async function passwordHash(password: string, salt: string) {
   const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(salt), iterations: 210000 }, key, 256);
   return Array.from(new Uint8Array(bits), x => x.toString(16).padStart(2, "0")).join("");
 }
-export type User = { id: string; name: string; email: string; role: string; status: string; balance: number; password_hash?: string; password_salt?: string };
-export const publicUser = (u: User) => ({ id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, balance: u.balance });
+export type User = { id: string; name: string; email: string; role: string; status: string; balance: number; avatar_url?: string | null; password_hash?: string; password_salt?: string };
+export const publicUser = (u: User) => ({ id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, balance: u.balance, avatar: u.avatar_url || null });
 export async function auth(request: Request): Promise<User | null> {
   const cookie = request.headers.get("cookie")?.match(/(?:^|;\s*)sms_session=([^;]+)/)?.[1];
   const apiKey = request.headers.get("x-api-key");

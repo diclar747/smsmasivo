@@ -56,14 +56,18 @@ async function sendOne(user: User, rawPhone: unknown, rawMessage: unknown, campa
   return { id: messageId, phone, status, segments: cost, providerId };
 }
 
-async function runCampaign(user: User, campaignId: string) {
+async function runCampaign(user: User, campaignId: string, sendNow = false) {
   const campaign = await first<{ id: string; body: string; status: string; scheduled_at: string | null }>("SELECT * FROM campaigns WHERE id=? AND user_id=?", campaignId, user.id);
   if (!campaign) throw new HttpError("Campaña no encontrada", 404);
   if (campaign.status === "cancelled" || campaign.status === "completed") throw new HttpError("La campaña ya terminó");
-  if (campaign.scheduled_at && campaign.scheduled_at > now()) throw new HttpError("La campaña aún no llegó a su horario");
-  await db().prepare("UPDATE campaigns SET status='sending' WHERE id=?").bind(campaignId).run();
+  if (sendNow) await db().prepare("UPDATE campaigns SET scheduled_at=NULL WHERE id=?").bind(campaignId).run();
+  else if (campaign.status === "paused") throw new HttpError("La campaña está pausada. Reanudala para continuar.");
+  else if (campaign.scheduled_at && campaign.scheduled_at > now()) throw new HttpError("La campaña aún no llegó a su horario");
+  await db().prepare("UPDATE campaigns SET status='sending' WHERE id=? AND status NOT IN ('cancelled','completed')").bind(campaignId).run();
   const pending = await rows<{ id: string; phone: string; name: string; variables: string }>("SELECT * FROM recipients WHERE campaign_id=? AND status='pending' ORDER BY rowid LIMIT 20", campaignId);
   for (const rec of pending) {
+    const live = await first<{ status: string }>("SELECT status FROM campaigns WHERE id=?", campaignId);
+    if (live?.status !== "sending") break; // pausada o cancelada mientras se procesaba
     const claim = await db().prepare("UPDATE recipients SET status='processing' WHERE id=? AND status='pending'").bind(rec.id).run();
     if (!claim.meta.changes) continue;
     try {
@@ -90,13 +94,38 @@ async function runCampaign(user: User, campaignId: string) {
     }
   }
   const left = await first<{ n: number }>("SELECT COUNT(*) AS n FROM recipients WHERE campaign_id=? AND status='pending'", campaignId);
-  if (!left?.n) await db().prepare("UPDATE campaigns SET status='completed' WHERE id=?").bind(campaignId).run();
-  return { processed: pending.length, remaining: left?.n || 0 };
+  if (!left?.n) await db().prepare("UPDATE campaigns SET status='completed' WHERE id=? AND status='sending'").bind(campaignId).run();
+  const final = await first<{ status: string; sent: number; failed: number; total: number }>("SELECT status,sent,failed,total FROM campaigns WHERE id=?", campaignId);
+  return { processed: pending.length, remaining: left?.n || 0, status: final?.status, sent: final?.sent, failed: final?.failed, total: final?.total };
+}
+
+const pricePerCredit = () => Number(config.PRICE_PER_CREDIT) || 150;
+const MIN_PURCHASE = 1000, MAX_PURCHASE = 5_000_000;
+type Order = { id: string; user_id: string; credits: number; price: number; payment_link_id: string; status: string };
+
+/** Consulta a Winsap si el link de la orden fue pagado (monto y link coinciden) y acredita el saldo una sola vez. */
+async function verifyOrder(order: Order): Promise<"paid" | "pending"> {
+  if (order.status === "paid") return "paid";
+  if (!config.WINSAP_PAYMENTS_KEY) throw new HttpError("Proveedor de pagos no configurado", 503);
+  let matched = false;
+  for (let page = 1; page <= 5 && !matched; page++) {
+    const result = await winsap(`/api/v1/payments?status=paid&limit=100&page=${page}`, String(config.WINSAP_PAYMENTS_KEY));
+    const payments = Array.isArray(result.data) ? result.data as { link_id: number; amount: number; status: string }[] : [];
+    matched = payments.some(p => String(p.link_id) === order.payment_link_id && Number(p.amount) === order.price && p.status === "paid");
+    if (payments.length < 100) break;
+  }
+  if (!matched) return "pending";
+  await db().batch([
+    db().prepare("UPDATE users SET balance=balance+? WHERE id=? AND EXISTS(SELECT 1 FROM orders WHERE id=? AND status='pending')").bind(order.credits, order.user_id, order.id),
+    db().prepare("UPDATE orders SET status='paid' WHERE id=? AND status='pending'").bind(order.id),
+    db().prepare("INSERT OR IGNORE INTO ledger(id,user_id,delta,reason,created_at) VALUES(?,?,?,?,?)").bind(order.id, order.user_id, order.credits, `Compra ${order.id}`, now()),
+  ]);
+  return "paid";
 }
 
 async function runCampaignSafe(user: User, campaignId: string) {
   try { return await runCampaign(user, campaignId); }
-  catch (e) { if (e instanceof HttpError && e.status === 402) return { processed: 0, remaining: -1, paused: true }; throw e; }
+  catch (e) { if (e instanceof HttpError && e.status === 402) return { processed: 0, remaining: -1, status: "paused", paused: true }; throw e; }
 }
 
 async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> {
@@ -153,7 +182,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     if (!tokenResponse.ok) return err("Google no autorizó el acceso", 401);
     const tokenData = await tokenResponse.json() as { access_token: string };
     const profileResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
-    const profile = await profileResponse.json() as { sub?: string; email?: string; email_verified?: boolean; name?: string };
+    const profile = await profileResponse.json() as { sub?: string; email?: string; email_verified?: boolean; name?: string; picture?: string };
     if (!profile.sub || !profile.email || !profile.email_verified) return err("Google no verificó el correo", 401);
     let user = await first<User>("SELECT * FROM users WHERE google_sub=?", profile.sub);
     if (!user) {
@@ -166,6 +195,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
       }
     }
     if (!user || user.status !== "active") return err("Cuenta inactiva", 403);
+    if (profile.picture?.startsWith("https://")) await db().prepare("UPDATE users SET avatar_url=? WHERE id=?").bind(profile.picture, user.id).run();
     return new Response(null, { status: 302, headers: { Location: `${url.origin}/app`, "Set-Cookie": await session(user.id, r.url) } });
   }
 
@@ -183,6 +213,12 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
 
   const user = await requireUser(r);
   if (route === "me" && method === "GET") return json({ user: publicUser(user) });
+  if (route === "me" && method === "PUT") {
+    const data = await body(r); const name = String(data.name || "").trim().slice(0, 100);
+    if (!name) return err("El nombre es obligatorio");
+    await db().prepare("UPDATE users SET name=? WHERE id=?").bind(name, user.id).run();
+    return json({ user: publicUser({ ...user, name }) });
+  }
   if (route === "dashboard" && method === "GET") {
     const campaigns = await rows("SELECT * FROM campaigns WHERE user_id=? ORDER BY created_at DESC LIMIT 6", user.id);
     const messages = await rows("SELECT * FROM messages WHERE user_id=? ORDER BY created_at DESC LIMIT 8", user.id);
@@ -244,16 +280,40 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const data = await body(r);
     const camp = await first<{ status: string }>("SELECT status FROM campaigns WHERE id=? AND user_id=?", path[1], user.id);
     if (!camp) return err("Campaña no encontrada", 404);
-    if (camp.status !== "draft" && camp.status !== "scheduled") return err("Sólo se pueden editar campañas pendientes");
-    const scheduled = data.scheduledAt ? new Date(String(data.scheduledAt)).toISOString() : null;
-    await db().prepare("UPDATE campaigns SET name=?,body=?,scheduled_at=?,status=? WHERE id=?").bind(String(data.name || "").trim().slice(0, 120), String(data.body || "").trim().slice(0, 1000), scheduled, scheduled ? "scheduled" : "draft", path[1]).run();
-    return json({ ok: true });
+    if (!["draft", "scheduled", "paused"].includes(camp.status)) return err("Sólo se pueden editar campañas pendientes o pausadas");
+    const name = String(data.name || "").trim().slice(0, 120), text = String(data.body || "").trim().slice(0, 1000);
+    if (!name || !text) return err("El nombre y el mensaje son obligatorios");
+    let scheduled: string | null = null;
+    if (data.scheduledAt) { const d = new Date(String(data.scheduledAt)); if (isNaN(d.getTime())) return err("Fecha de programación inválida"); scheduled = d.toISOString(); }
+    const status = camp.status === "paused" ? "paused" : scheduled ? "scheduled" : "draft";
+    await db().prepare("UPDATE campaigns SET name=?,body=?,scheduled_at=?,status=? WHERE id=?").bind(name, text, scheduled, status, path[1]).run();
+    return json({ ok: true, status });
   }
   if (path[0] === "campaigns" && path[1] && path.length === 2 && method === "DELETE") {
-    await db().prepare("UPDATE campaigns SET status='cancelled' WHERE id=? AND user_id=? AND status IN ('draft','scheduled')").bind(path[1], user.id).run();
+    const camp = await first<{ status: string }>("SELECT status FROM campaigns WHERE id=? AND user_id=?", path[1], user.id);
+    if (!camp) return err("Campaña no encontrada", 404);
+    if (camp.status === "sending") return err("Pausá la campaña antes de eliminarla");
+    await db().batch([
+      db().prepare("DELETE FROM recipients WHERE campaign_id=?").bind(path[1]),
+      db().prepare("DELETE FROM campaigns WHERE id=? AND user_id=?").bind(path[1], user.id),
+    ]);
     return json({ ok: true });
   }
-  if (path[0] === "campaigns" && path[1] && path[2] === "run" && method === "POST") return json(await runCampaign(user, path[1]));
+  if (path[0] === "campaigns" && path[1] && path[2] === "pause" && method === "POST") {
+    const res = await db().prepare("UPDATE campaigns SET status='paused' WHERE id=? AND user_id=? AND status IN ('sending','scheduled')").bind(path[1], user.id).run();
+    if (!res.meta.changes) return err("Sólo se puede pausar una campaña en curso o programada");
+    return json({ ok: true, status: "paused" });
+  }
+  if (path[0] === "campaigns" && path[1] && path[2] === "cancel" && method === "POST") {
+    const res = await db().prepare("UPDATE campaigns SET status='cancelled' WHERE id=? AND user_id=? AND status IN ('draft','scheduled','sending','paused')").bind(path[1], user.id).run();
+    if (!res.meta.changes) return err("La campaña ya terminó o no existe");
+    return json({ ok: true, status: "cancelled" });
+  }
+  if (path[0] === "campaigns" && path[1] && path[2] === "run" && method === "POST") {
+    let sendNow = false;
+    try { sendNow = (await r.json() as Dict).now === true; } catch { /* cuerpo vacío */ }
+    return json(await runCampaign(user, path[1], sendNow));
+  }
   if (route === "campaigns/process" && method === "POST") {
     const due = await rows<{ id: string }>("SELECT id FROM campaigns WHERE user_id=? AND status IN ('scheduled','sending') AND (scheduled_at IS NULL OR scheduled_at<=?) ORDER BY created_at LIMIT 4", user.id, now());
     const results = [];
@@ -268,43 +328,37 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const messages = await rows("SELECT * FROM messages WHERE user_id=? AND created_at>=? AND created_at<=? AND (?='' OR campaign_id=?) AND (?='' OR status=?) ORDER BY created_at DESC LIMIT 1000", user.id, from, to, campaign, campaign, status, status);
     return json({ messages });
   }
-  if (route === "wallet" && method === "GET") return json({ balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0, ledger: await rows("SELECT * FROM ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user.id), orders: await rows("SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user.id), packages: await rows("SELECT * FROM packages WHERE active=1 ORDER BY credits") });
+  if (route === "wallet" && method === "GET") return json({ balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0, ledger: await rows("SELECT * FROM ledger WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user.id), orders: await rows("SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user.id), packages: await rows("SELECT * FROM packages WHERE active=1 ORDER BY credits"), pricePerCredit: pricePerCredit(), minPurchase: MIN_PURCHASE, maxPurchase: MAX_PURCHASE });
   if (route === "wallet/provider-balance" && method === "GET") {
     requireAdmin(user);
     if (!config.WINSAP_SMS_KEY) return err("Proveedor SMS no configurado", 503);
     return json(await winsap("/api/rest/sms/balance", String(config.WINSAP_SMS_KEY)));
   }
   if (route === "orders" && method === "POST") {
-    if (config.PAYMENTS_LIVE !== "true" || !config.WINSAP_PAYMENTS_KEY) return err("Los pagos están desactivados hasta confirmar los precios", 503);
+    if (config.PAYMENTS_LIVE !== "true" || !config.WINSAP_PAYMENTS_KEY) return err("Los pagos todavía no están activados", 503);
+    await rateLimit(`orders:${user.id}`, 10, 3600);
     const data = await body(r);
-    const pkg = await first<{ id: string; credits: number; price: number }>("SELECT * FROM packages WHERE id=? AND active=1", String(data.packageId || ""));
-    if (!pkg) return err("Paquete no disponible", 404);
+    const credits = Number(data.credits), price = credits * pricePerCredit();
+    if (!Number.isInteger(credits) || credits < 1) return err("Elegí una cantidad de créditos válida");
+    if (price < MIN_PURCHASE) return err(`La compra mínima es de Gs. ${MIN_PURCHASE.toLocaleString("es-PY")}`);
+    if (price > MAX_PURCHASE) return err(`La compra máxima es de Gs. ${MAX_PURCHASE.toLocaleString("es-PY")}`);
     const orderId = id();
-    const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${pkg.credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price: pkg.price, currency: "PYG", product_type: "digital", reference: orderId, success_url: `${url.origin}/app?payment=success`, cancel_url: `${url.origin}/app?payment=cancelled` });
+    const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price, currency: "PYG", product_type: "digital", reference: orderId, success_url: `${url.origin}/app?payment=success`, cancel_url: `${url.origin}/app?payment=cancelled` });
     const link = payment.data as { id: number; payment_url: string };
     await db().prepare("INSERT INTO orders(id,user_id,credits,price,payment_link_id,payment_url,status,created_at) VALUES(?,?,?,?,?,?,'pending',?)")
-      .bind(orderId, user.id, pkg.credits, pkg.price, String(link.id), link.payment_url, now()).run();
-    return json({ id: orderId, paymentUrl: link.payment_url }, 201);
+      .bind(orderId, user.id, credits, price, String(link.id), link.payment_url, now()).run();
+    return json({ id: orderId, paymentUrl: link.payment_url, credits, price }, 201);
+  }
+  if (route === "orders/verify-pending" && method === "POST") {
+    const pending = await rows<Order>("SELECT * FROM orders WHERE user_id=? AND status='pending' AND payment_link_id IS NOT NULL ORDER BY created_at DESC LIMIT 5", user.id);
+    let credited = 0;
+    for (const order of pending) if (await verifyOrder(order) === "paid") credited += order.credits;
+    return json({ credited, pending: pending.length });
   }
   if (path[0] === "orders" && path[1] && path[2] === "verify" && method === "POST") {
-    const order = await first<{ id: string; user_id: string; credits: number; price: number; payment_link_id: string; status: string }>("SELECT * FROM orders WHERE id=? AND user_id=?", path[1], user.id);
+    const order = await first<Order>("SELECT * FROM orders WHERE id=? AND user_id=?", path[1], user.id);
     if (!order) return err("Orden no encontrada", 404);
-    if (order.status === "paid") return json({ status: "paid" });
-    if (!config.WINSAP_PAYMENTS_KEY) return err("Proveedor de pagos no configurado", 503);
-    let matched = false;
-    for (let page = 1; page <= 5 && !matched; page++) {
-      const result = await winsap(`/api/v1/payments?status=paid&limit=100&page=${page}`, String(config.WINSAP_PAYMENTS_KEY));
-      const payments = Array.isArray(result.data) ? result.data as { link_id: number; amount: number; status: string }[] : [];
-      matched = payments.some(p => String(p.link_id) === order.payment_link_id && Number(p.amount) === order.price && p.status === "paid");
-      if (payments.length < 100) break;
-    }
-    if (!matched) return json({ status: "pending" });
-    await db().batch([
-      db().prepare("UPDATE users SET balance=balance+? WHERE id=? AND EXISTS(SELECT 1 FROM orders WHERE id=? AND status='pending')").bind(order.credits, user.id, order.id),
-      db().prepare("UPDATE orders SET status='paid' WHERE id=? AND status='pending'").bind(order.id),
-      db().prepare("INSERT OR IGNORE INTO ledger(id,user_id,delta,reason,created_at) VALUES(?,?,?,?,?)").bind(order.id, user.id, order.credits, `Compra ${order.id}`, now()),
-    ]);
-    return json({ status: "paid" });
+    return json({ status: await verifyOrder(order) });
   }
   if (route === "optouts" && method === "GET") return json({ optouts: await rows("SELECT * FROM optouts WHERE user_id=? ORDER BY created_at DESC LIMIT 2000", user.id) });
   if (route === "optouts" && method === "POST") {
