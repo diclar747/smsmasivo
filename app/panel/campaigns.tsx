@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ban, CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Eye, FileSpreadsheet, Pause, Pencil, Play, Plus, Search, Send, Trash2, X } from "lucide-react";
 import { prepareSms, SMS_MAX } from "@/lib/sms-text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type Ask, type Campaign, type Contact, type Recipient, Empty, Status, date, fmt, normalizePhone, parseSpreadsheet, pct, renderMessage, request, segmentsOf, smsIssue } from "./shared";
+import { type Ask, type Campaign, type Contact, type Group, type Recipient, Empty, Status, date, fmt, normalizePhone, parseSpreadsheet, pct, renderMessage, request, segmentsOf, smsIssue } from "./shared";
 
 const FILTERS: [string, string][] = [["all", "Todas"], ["draft", "Borradores"], ["scheduled", "Programadas"], ["sending", "Enviando"], ["paused", "Pausadas"], ["completed", "Completadas"], ["cancelled", "Canceladas"]];
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -148,16 +148,17 @@ function CampaignCard({ c, busy, onView, onStart, onStop, onEdit, onDuplicate, o
 function Wizard({ init, balance, ask, flash, onClose, onCreated }: { init: { name: string; body: string; rows: Recipient[] | null }; balance: number; ask: Ask; flash: (s: string) => void; onClose: () => void; onCreated: (id: string, sendNow: boolean) => void }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(init.name), [body, setBody] = useState(init.body);
-  const [source, setSource] = useState<"contacts" | "paste" | "file">(init.rows ? "file" : "contacts");
+  const [source, setSource] = useState<"contacts" | "paste" | "groups" | "file">(init.rows ? "file" : "contacts");
+  const [groups, setGroups] = useState<Group[]>([]), [selGroups, setSelGroups] = useState<Set<string>>(new Set());
   const [paste, setPaste] = useState(""), [fileRows, setFileRows] = useState<Recipient[]>(init.rows || []), [fileName, setFileName] = useState(init.rows ? "Lista de la campaña original" : "");
   const [contacts, setContacts] = useState<Contact[]>([]), [optouts, setOptouts] = useState<Set<string>>(new Set());
   const [when, setWhen] = useState<"now" | "later" | "draft">("now"), [schedule, setSchedule] = useState("");
   const [busy, setBusy] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { request("contacts").then(d => setContacts(d.contacts)).catch(() => { }); request("optouts").then(d => setOptouts(new Set(d.optouts.map((o: { phone: string }) => o.phone)))).catch(() => { }); }, []);
+  useEffect(() => { request("groups").then(d => setGroups(d.groups)).catch(() => { }); request("contacts").then(d => setContacts(d.contacts)).catch(() => { }); request("optouts").then(d => setOptouts(new Set(d.optouts.map((o: { phone: string }) => o.phone)))).catch(() => { }); }, []);
 
-  const raw: Recipient[] = useMemo(() => source === "contacts" ? contacts.map(c => ({ phone: c.phone, name: c.name, variables: JSON.parse(c.variables || "{}") })) : source === "file" ? fileRows : paste.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => { const [phone, n, ...rest] = line.split(/[,;\t]/); return { phone: phone?.trim() || "", name: n?.trim() || "", variables: rest.length ? { dato: rest.join(" ").trim() } : {} }; }), [source, contacts, fileRows, paste]);
+  const raw: Recipient[] = useMemo(() => source === "contacts" ? contacts.map(c => ({ phone: c.phone, name: c.name, variables: JSON.parse(c.variables || "{}") })) : source === "groups" ? contacts.filter(c => c.group_ids?.some(g => selGroups.has(g))).map(c => ({ phone: c.phone, name: c.name, variables: JSON.parse(c.variables || "{}") })) : source === "file" ? fileRows : paste.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => { const [phone, n, ...rest] = line.split(/[,;\t]/); return { phone: phone?.trim() || "", name: n?.trim() || "", variables: rest.length ? { dato: rest.join(" ").trim() } : {} }; }), [source, contacts, fileRows, paste, selGroups]);
   const calc = useMemo(() => {
     const seen = new Set<string>(); const valid: Recipient[] = []; let invalid = 0, dups = 0, excluded = 0;
     for (const r of raw) { const p = normalizePhone(r.phone); if (!p) { invalid++; continue; } if (seen.has(p)) { dups++; continue; } seen.add(p); if (optouts.has(p)) { excluded++; continue; } valid.push({ ...r, phone: p }); }
@@ -201,7 +202,11 @@ function Wizard({ init, balance, ask, flash, onClose, onCreated }: { init: { nam
           {calc.bad > 0 && <div className="wz-warn">{calc.bad} destinatario(s) superan los {SMS_MAX} caracteres o tienen caracteres no admitidos. {calc.badSample}</div>}
         </>}
         {step === 2 && <>
-          <div className="wz-tabs">{([["contacts", `Mis contactos (${contacts.length})`], ["paste", "Pegar lista"], ["file", "Excel / CSV"]] as const).map(([k, l]) => <button key={k} className={source === k ? "on" : ""} onClick={() => setSource(k)}>{l}</button>)}</div>
+          <div className="wz-tabs">{([["contacts", `Mis contactos (${contacts.length})`], ["paste", "Pegar lista"], ["groups", `Grupos (${groups.length})`], ["file", "Excel / CSV"]] as const).map(([k, l]) => <button key={k} className={source === k ? "on" : ""} onClick={() => setSource(k)}>{l}</button>)}</div>
+          {source === "groups" && (groups.length ? <div className="wz-groups">
+            <div className="wz-note">Marcá uno o más grupos. Si un contacto está en varios, recibe el mensaje una sola vez.</div>
+            <ul>{groups.map(g => <li key={g.id}><label><input type="checkbox" checked={selGroups.has(g.id)} onChange={() => setSelGroups(prev => { const n = new Set(prev); if (n.has(g.id)) n.delete(g.id); else n.add(g.id); return n; })} /><span>{g.name}</span><small>{fmt(g.count)} contacto(s)</small></label></li>)}</ul>
+          </div> : <div className="wz-note">Todavía no tenés grupos. Creá uno en la sección Contactos (por ejemplo, Clientes interesados) y agregale contactos.</div>)}
           {source === "contacts" && <div className="wz-note">Se incluyen todos los contactos de tu base. Para agregar más, importalos en la sección Contactos.</div>}
           {source === "paste" && <label className="wz-label">Un número por línea (nombre opcional)<textarea rows={7} value={paste} onChange={e => setPaste(e.target.value)} placeholder={"0981234567,María\n0982345678,Carlos"} /></label>}
           {source === "file" && <label className="wz-drop"><FileSpreadsheet size={26} /><strong>{fileName || "Elegir planilla"}</strong><span>{fileRows.length ? `${fmt(fileRows.length)} filas leídas` : "Excel o CSV con número, nombre y variables"}</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e => e.target.files?.[0] && pickFile(e.target.files[0])} /></label>}

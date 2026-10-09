@@ -3,7 +3,8 @@ import { prepareSms, smsProblem } from "@/lib/sms-text";
 import { MessageSquareText } from "lucide-react";
 
 export type User = { id: string; name: string; email: string; role: string; status: string; balance: number; avatar?: string | null };
-export type Contact = { id: string; phone: string; name: string; variables: string; created_at: string };
+export type Contact = { id: string; phone: string; name: string; variables: string; created_at: string; group_ids?: string[] };
+export type Group = { id: string; name: string; count: number };
 export type Campaign = { id: string; name: string; body: string; status: string; total: number; sent: number; failed: number; scheduled_at: string | null; created_at: string };
 export type Message = { id: string; phone: string; body: string; status: string; segments: number; campaign_id: string | null; created_at: string };
 export type Package = { id: string; credits: number; price: number; active: number };

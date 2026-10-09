@@ -1,4 +1,4 @@
-import { bigint, bigserial, index, integer, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, bigserial, index, integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(), name: text("name").notNull(), email: text("email").notNull().unique(),
@@ -56,3 +56,10 @@ export const rateLimits = pgTable("rate_limits", {
 export const optouts = pgTable("optouts", {
   id: text("id").primaryKey(), userId: text("user_id").notNull(), phone: text("phone").notNull(), createdAt: text("created_at").notNull(),
 }, t => [uniqueIndex("optouts_user_phone_idx").on(t.userId, t.phone)]);
+export const contactGroups = pgTable("contact_groups", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull(), name: text("name").notNull(), createdAt: text("created_at").notNull(),
+});
+export const contactGroupMembers = pgTable("contact_group_members", {
+  groupId: text("group_id").notNull().references(() => contactGroups.id, { onDelete: "cascade" }),
+  contactId: text("contact_id").notNull().references(() => contacts.id, { onDelete: "cascade" }),
+}, t => [primaryKey({ columns: [t.groupId, t.contactId] }), index("contact_group_members_contact_idx").on(t.contactId)]);

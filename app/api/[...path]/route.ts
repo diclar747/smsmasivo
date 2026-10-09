@@ -299,21 +299,69 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const daily = await rows("SELECT substr(created_at,1,10) AS day, COUNT(*) AS n FROM messages WHERE user_id=? AND created_at>=? AND status IN ('aceptado','simulado') GROUP BY day", user.id, since);
     return json({ campaigns, messages, stats, daily, contacts: (contacts as { total: number })?.total || 0, balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0 });
   }
-  if (route === "contacts" && method === "GET") return json({ contacts: await rows("SELECT * FROM contacts WHERE user_id=? ORDER BY created_at DESC LIMIT 2000", user.id) });
+  if (route === "contacts" && method === "GET") return json({ contacts: await rows("SELECT c.*, ARRAY(SELECT m.group_id FROM contact_group_members m WHERE m.contact_id=c.id) AS group_ids FROM contacts c WHERE c.user_id=? ORDER BY c.created_at DESC LIMIT 2000", user.id) });
   if (route === "contacts" && method === "POST") {
     const data = await body(r);
     const items = Array.isArray(data.contacts) ? data.contacts.slice(0, 2000) as Dict[] : [];
     if (!items.length) return err("No hay contactos válidos");
+    const groupId = data.groupId ? String(data.groupId) : "";
+    if (groupId && !await first("SELECT id FROM contact_groups WHERE id=? AND user_id=?", groupId, user.id)) return err("Grupo no encontrado", 404);
     let added = 0;
-    const existing = new Set((await rows<{ phone: string }>("SELECT phone FROM contacts WHERE user_id=?", user.id)).map(x => x.phone));
+    const existing = new Map((await rows<{ id: string; phone: string }>("SELECT id,phone FROM contacts WHERE user_id=?", user.id)).map(x => [x.phone, x.id]));
+    const toGroup: string[] = [];
     for (const item of items) {
       const phone = normalizePhone(item.phone);
-      if (!phone || existing.has(phone)) continue;
+      if (!phone) continue;
+      const known = existing.get(phone);
+      if (known) { toGroup.push(known); continue; }
       const vars = item.variables && typeof item.variables === "object" && !Array.isArray(item.variables) ? item.variables : {};
-      await db().prepare("INSERT INTO contacts(id,user_id,phone,name,variables,created_at) VALUES(?,?,?,?,?,?)").bind(id(), user.id, phone, String(item.name || "").slice(0, 100), JSON.stringify(vars), now()).run();
-      existing.add(phone); added++;
+      const contactId = id();
+      await db().prepare("INSERT INTO contacts(id,user_id,phone,name,variables,created_at) VALUES(?,?,?,?,?,?)").bind(contactId, user.id, phone, String(item.name || "").slice(0, 100), JSON.stringify(vars), now()).run();
+      existing.set(phone, contactId); toGroup.push(contactId); added++;
     }
-    return json({ added });
+    let grouped = 0;
+    if (groupId) for (const part of chunk([...new Set(toGroup)], 100)) grouped += (await db().prepare(`INSERT INTO contact_group_members(group_id,contact_id) SELECT ?, c.id FROM contacts c WHERE c.user_id=? AND c.id IN (${part.map(() => "?").join(",")}) ON CONFLICT DO NOTHING`).bind(groupId, user.id, ...part).run()).meta.changes || 0;
+    return json({ added, grouped });
+  }
+  // Grupos de contactos
+  const groupCount = "(SELECT COUNT(*) FROM contact_group_members m WHERE m.group_id=g.id) AS count";
+  if (route === "groups" && method === "GET") return json({ groups: await rows(`SELECT g.id, g.name, g.created_at, ${groupCount} FROM contact_groups g WHERE g.user_id=? ORDER BY lower(g.name)`, user.id) });
+  if (route === "groups" && method === "POST") {
+    const data = await body(r);
+    const name = String(data.name || "").trim().slice(0, 60);
+    if (!name) return err("Escribí un nombre para el grupo");
+    const total = await first<{ n: number }>("SELECT COUNT(*) AS n FROM contact_groups WHERE user_id=?", user.id);
+    if ((total?.n || 0) >= 200) return err("Llegaste al máximo de 200 grupos", 422);
+    if (await first("SELECT id FROM contact_groups WHERE user_id=? AND lower(name)=lower(?)", user.id, name)) return err("Ya tenés un grupo con ese nombre", 409);
+    const groupId = id();
+    await db().prepare("INSERT INTO contact_groups(id,user_id,name,created_at) VALUES(?,?,?,?)").bind(groupId, user.id, name, now()).run();
+    return json({ group: { id: groupId, name, count: 0 } }, 201);
+  }
+  if (path[0] === "groups" && path[1] && path.length === 2 && method === "PUT") {
+    const data = await body(r);
+    const name = String(data.name || "").trim().slice(0, 60);
+    if (!name) return err("Escribí un nombre para el grupo");
+    if (await first("SELECT id FROM contact_groups WHERE user_id=? AND lower(name)=lower(?) AND id<>?", user.id, name, path[1])) return err("Ya tenés un grupo con ese nombre", 409);
+    const res = await db().prepare("UPDATE contact_groups SET name=? WHERE id=? AND user_id=?").bind(name, path[1], user.id).run();
+    if (!res.meta.changes) return err("Grupo no encontrado", 404);
+    return json({ ok: true });
+  }
+  if (path[0] === "groups" && path[1] && path.length === 2 && method === "DELETE") {
+    const res = await db().prepare("DELETE FROM contact_groups WHERE id=? AND user_id=?").bind(path[1], user.id).run();
+    if (!res.meta.changes) return err("Grupo no encontrado", 404);
+    return json({ ok: true }); // los contactos no se eliminan, solo el grupo
+  }
+  if (path[0] === "groups" && path[1] && (path[2] === "members" || path[2] === "remove") && path.length === 3 && method === "POST") {
+    const data = await body(r);
+    if (!await first("SELECT id FROM contact_groups WHERE id=? AND user_id=?", path[1], user.id)) return err("Grupo no encontrado", 404);
+    let changed = 0;
+    if (path[2] === "members") {
+      if (data.all === true) changed = (await db().prepare("INSERT INTO contact_group_members(group_id,contact_id) SELECT ?, c.id FROM contacts c WHERE c.user_id=? ON CONFLICT DO NOTHING").bind(path[1], user.id).run()).meta.changes || 0;
+      else for (const part of chunk(idList(data.ids), 100)) changed += (await db().prepare(`INSERT INTO contact_group_members(group_id,contact_id) SELECT ?, c.id FROM contacts c WHERE c.user_id=? AND c.id IN (${part.map(() => "?").join(",")}) ON CONFLICT DO NOTHING`).bind(path[1], user.id, ...part).run()).meta.changes || 0;
+      return json({ added: changed });
+    }
+    for (const part of chunk(idList(data.ids), 100)) changed += (await db().prepare(`DELETE FROM contact_group_members WHERE group_id=? AND contact_id IN (${part.map(() => "?").join(",")})`).bind(path[1], ...part).run()).meta.changes || 0;
+    return json({ removed: changed });
   }
   if (route === "contacts/delete" && method === "POST") {
     const data = await body(r);

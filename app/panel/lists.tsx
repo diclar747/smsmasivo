@@ -2,7 +2,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownToLine, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CreditCard, ExternalLink, Search, ShieldCheck, Trash2, X } from "lucide-react";
-import { type Ask, type Contact, Empty, Status, date, fmt, request } from "./shared";
+import { GroupsBar, createGroupDialog } from "./groups";
+import { type Ask, type Contact, type Group, Empty, Status, date, fmt, request } from "./shared";
 
 const SIZES = [15, 30, 50, 100];
 const errMsg = (e: unknown) => e instanceof Error ? e.message : "Ocurrió un error";
@@ -195,11 +196,15 @@ export function OrdersPanel({ ask, flash, reloadKey, onChanged }: { ask: Ask; fl
 }
 
 /* ------------------------------------------------------------------ Contactos */
-export function ContactsList({ contacts, ask, flash, onChanged }: { contacts: Contact[]; ask: Ask; flash: (s: string) => void; onChanged: () => void }) {
+export function ContactsList({ contacts, groups, ask, flash, onChanged }: { contacts: Contact[]; groups: Group[]; ask: Ask; flash: (s: string) => void; onChanged: () => void }) {
+  const [active, setActive] = useState<string | null>(null);
+  const activeGroup = groups.find(g => g.id === active) || null;
+  const base = useMemo(() => activeGroup ? contacts.filter(c => c.group_ids?.includes(activeGroup.id)) : contacts, [contacts, activeGroup]);
+  const gname = useMemo(() => new Map(groups.map(g => [g.id, g.name])), [groups]);
   const [q, setQ] = useState(""), [page, setPage] = useState(1), [size, setSize] = useState(15), [sel, setSel] = useState<Set<string>>(new Set());
   const dq = useDebounced(q, 200);
-  const list = useMemo(() => { const t = dq.trim().toLowerCase(), d = dq.replace(/\D/g, ""); return t ? contacts.filter(c => `${c.name} ${c.phone} ${c.variables}`.toLowerCase().includes(t) || (d.length >= 3 && c.phone.includes(d.replace(/^0/, "")))) : contacts; }, [contacts, dq]);
-  useEffect(() => { setPage(1); setSel(new Set()); }, [dq, size]);
+  const list = useMemo(() => { const t = dq.trim().toLowerCase(), d = dq.replace(/\D/g, ""); return t ? base.filter(c => `${c.name} ${c.phone} ${c.variables}`.toLowerCase().includes(t) || (d.length >= 3 && c.phone.includes(d.replace(/^0/, "")))) : base; }, [base, dq]);
+  useEffect(() => { setPage(1); setSel(new Set()); }, [dq, size, active]);
   const pages = Math.max(1, Math.ceil(list.length / size)), cur = Math.min(page, pages);
   const rows = list.slice((cur - 1) * size, cur * size);
   const allOn = rows.length > 0 && rows.every(r => sel.has(r.id));
@@ -208,14 +213,24 @@ export function ContactsList({ contacts, ask, flash, onChanged }: { contacts: Co
     if (!await ask({ title, message, confirmLabel: label, danger: true })) return;
     try { const d = await request("contacts/delete", "POST", body); flash(`${fmt(d.deleted)} contacto(s) eliminado(s)`); setSel(new Set()); onChanged(); } catch (e) { flash(errMsg(e)); }
   }
+  async function addToGroup(groupId: string) {
+    let gid = groupId;
+    if (gid === "__new") { const g = await createGroupDialog(ask, flash); if (!g) return; gid = g.id; }
+    try { const d = await request(`groups/${gid}/members`, "POST", { ids: [...sel] }); flash(`${fmt(d.added)} contacto(s) agregados al grupo`); setSel(new Set()); onChanged(); } catch (e) { flash(errMsg(e)); }
+  }
+  async function removeFromGroup() {
+    if (!activeGroup) return;
+    try { const d = await request(`groups/${activeGroup.id}/remove`, "POST", { ids: [...sel] }); flash(`${fmt(d.removed)} contacto(s) quitados del grupo`); setSel(new Set()); onChanged(); } catch (e) { flash(errMsg(e)); }
+  }
   return <section className="dt panel-like">
-    <header className="dt-title"><div><h2>Base de contactos</h2><p>Tu lista guardada para futuras campañas.</p></div>
-      <div className="dt-actions inline">{sel.size > 0 && <button className="dx-btn danger sm" onClick={() => del({ ids: [...sel] }, "Eliminar contactos", `Se eliminan ${fmt(sel.size)} contacto(s) seleccionados.`, "Eliminar")}><Trash2 size={14} /> Eliminar seleccionados ({sel.size})</button>}<button className="dx-btn danger sm" disabled={!contacts.length} onClick={() => del({ all: true }, "Vaciar contactos", `Se eliminan los ${fmt(contacts.length)} contactos de tu base. No se puede deshacer.`, "Vaciar contactos")}><Trash2 size={14} /> Vaciar lista</button></div></header>
+    <header className="dt-title"><div><h2>{activeGroup ? activeGroup.name : "Base de contactos"}</h2><p>{activeGroup ? `${fmt(base.length)} contacto(s) en este grupo.` : "Tu lista guardada para futuras campañas."}</p></div>
+      <div className="dt-actions inline">{sel.size > 0 && <select className="grp-assign" value="" onChange={e => e.target.value && addToGroup(e.target.value)} aria-label="Agregar seleccionados a un grupo"><option value="">Agregar a grupo ({sel.size})</option>{groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}<option value="__new">+ Nuevo grupo…</option></select>}{sel.size > 0 && activeGroup && <button className="dx-btn ghost sm" onClick={removeFromGroup}>Quitar del grupo</button>}{sel.size > 0 && <button className="dx-btn danger sm" onClick={() => del({ ids: [...sel] }, "Eliminar contactos", `Se eliminan ${fmt(sel.size)} contacto(s) seleccionados.`, "Eliminar")}><Trash2 size={14} /> Eliminar seleccionados ({sel.size})</button>}{!activeGroup && <button className="dx-btn danger sm" disabled={!contacts.length} onClick={() => del({ all: true }, "Vaciar contactos", `Se eliminan los ${fmt(contacts.length)} contactos de tu base. No se puede deshacer.`, "Vaciar contactos")}><Trash2 size={14} /> Vaciar lista</button>}</div></header>
+    <GroupsBar groups={groups} active={active} onActive={setActive} total={contacts.length} ask={ask} flash={flash} onChanged={onChanged} />
     <div className="dt-filters"><SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, número o dato…" />{q && <button className="dx-link" onClick={() => setQ("")}>Limpiar</button>}</div>
     <div className="dt-wrap">
       {rows.length ? <table className="dt-table"><thead><tr><th className="chk"><input type="checkbox" checked={allOn} onChange={() => setSel(allOn ? new Set() : new Set(rows.map(r => r.id)))} aria-label="Seleccionar todos" /></th><th>Nombre</th><th>Número</th><th>Variables</th><th>Agregado</th><th /></tr></thead>
-        <tbody>{rows.map(c => { let vars: string[] = []; try { vars = Object.keys(JSON.parse(c.variables || "{}")); } catch { /* sin variables */ } return <tr key={c.id} className={sel.has(c.id) ? "sel" : ""}><td className="chk"><input type="checkbox" checked={sel.has(c.id)} onChange={() => toggle(c.id)} aria-label="Seleccionar" /></td><td><b>{c.name || "Sin nombre"}</b></td><td className="nowrap">+{c.phone}</td><td>{vars.join(", ") || "—"}</td><td className="nowrap">{date(c.created_at)}</td><td className="act"><button title="Eliminar" onClick={() => del({ ids: [c.id] }, "Eliminar contacto", `Se elimina a ${c.name || "+" + c.phone}.`, "Eliminar")}><Trash2 size={15} /></button></td></tr>; })}</tbody></table>
-        : <Empty title={contacts.length ? "Sin resultados" : "Tu base está vacía"} subtitle={contacts.length ? "Probá con otra búsqueda." : "Importá un archivo o pegá números arriba."} />}
+        <tbody>{rows.map(c => { let vars: string[] = []; try { vars = Object.keys(JSON.parse(c.variables || "{}")); } catch { /* sin variables */ } return <tr key={c.id} className={sel.has(c.id) ? "sel" : ""}><td className="chk"><input type="checkbox" checked={sel.has(c.id)} onChange={() => toggle(c.id)} aria-label="Seleccionar" /></td><td><b>{c.name || "Sin nombre"}</b>{!!c.group_ids?.length && <div className="grp-tags">{c.group_ids.map(g => gname.get(g) && <span key={g}>{gname.get(g)}</span>)}</div>}</td><td className="nowrap">+{c.phone}</td><td>{vars.join(", ") || "—"}</td><td className="nowrap">{date(c.created_at)}</td><td className="act"><button title="Eliminar" onClick={() => del({ ids: [c.id] }, "Eliminar contacto", `Se elimina a ${c.name || "+" + c.phone}.`, "Eliminar")}><Trash2 size={15} /></button></td></tr>; })}</tbody></table>
+        : <Empty title={base.length ? "Sin resultados" : activeGroup ? "Este grupo está vacío" : contacts.length ? "Sin resultados" : "Tu base está vacía"} subtitle={base.length ? "Probá con otra búsqueda." : activeGroup ? "Marcá contactos en Todos y agregalos a este grupo, o importá una lista directo al grupo." : contacts.length ? "Probá con otra búsqueda." : "Importá un archivo o pegá números arriba."} />}
     </div>
     <Pager page={cur} size={size} total={list.length} onPage={setPage} onSize={setSize} />
   </section>;
