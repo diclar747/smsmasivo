@@ -3,17 +3,15 @@ import "./globals.css";
 import "./extra.css";
 import "./docs.css";
 import "./dash.css";
+import "./seo.css";
 
 export const metadata: Metadata = {
-  title: "NexoSMS | SMS masivo para Paraguay",
-  description: "Campañas SMS, envíos programados, contactos, reportes y API para empresas en Paraguay.",
-  other: {
-    "codex-preview": "NexoSMS",
-  },
-  icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
-  },
+  metadataBase: new URL("https://nexosms.cnid.com.py"),
+  title: { default: "NexoSMS | SMS masivo para Paraguay", template: "%s" },
+  description: "SMS masivos en Paraguay: campañas, recordatorios, notificaciones y API para empresas.",
+  applicationName: "NexoSMS",
+  robots: { index: true, follow: true },
+  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
 };
 
 export default function RootLayout({
