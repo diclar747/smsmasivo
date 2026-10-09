@@ -17,7 +17,7 @@ const endpoints = [
   ["POST", "/api/campaigns/:id/pause", "Detener una campaña en curso o programada."],
   ["POST", "/api/campaigns/:id/cancel", "Cancelar definitivamente una campaña."],
   ["DELETE", "/api/campaigns/:id", "Eliminar la campaña y su lista de destinatarios (no se puede si está enviando)."],
-  ["POST", "/api/campaigns/:id/run", "Procesar hasta 20 destinatarios; con {"now":true} reanuda o envía sin esperar el horario. Repetir hasta remaining=0."],
+  ["POST", "/api/campaigns/:id/run", "Procesar hasta 20 destinatarios; con now: true reanuda o envía sin esperar el horario. Repetir hasta remaining=0."],
   ["POST", "/api/campaigns/process", "Procesar campañas programadas que ya vencieron."],
   ["GET", "/api/reports", "Historial filtrable: from, to, campaign, status."],
   ["GET", "/api/wallet", "Saldo, movimientos, paquetes y compras."],
