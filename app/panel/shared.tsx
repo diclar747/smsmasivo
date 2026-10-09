@@ -1,3 +1,4 @@
+import { prepareSms, smsProblem } from "@/lib/sms-text";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { MessageSquareText } from "lucide-react";
 
@@ -58,11 +59,10 @@ export function normalizePhone(input: unknown) {
 }
 export const renderMessage = (body: string, row: Record<string, unknown>) => body.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key: string) => String(row[key] ?? ""));
 export function segmentsOf(body: string) {
-  if (!body) return 0;
-  const gsm = /^[\x00-\x7F€£¥èéùìòÇØøÅåΔΦΓΛΩΠΨΣΘΞÆæÉßÑñÜüà^{}\\[~\]|]*$/.test(body);
-  const length = [...body].length;
-  return gsm ? (length <= 160 ? 1 : Math.ceil(length / 153)) : (length <= 70 ? 1 : Math.ceil(length / 67));
+  return prepareSms(body).text ? 1 : 0; // siempre 1 SMS: lo que pase de 160 caracteres se rechaza
 }
+/** Motivo por el que el texto no se puede enviar (null si está bien). */
+export const smsIssue = (body: string) => smsProblem(prepareSms(body));
 
 export function Status({ value }: { value: string }) { return <span className={`status status-${value}`}>{statusText[value] || value}</span>; }
 export function Empty({ title, subtitle }: { title: string; subtitle: string }) { return <div className="empty-state"><div className="empty-icon"><MessageSquareText size={24} /></div><strong>{title}</strong><p>{subtitle}</p></div>; }

@@ -1,4 +1,5 @@
-import { auth, clientIp, config, db, err, id, json, normalizePhone, now, passwordHash, publicUser, random, RateLimitError, rateLimit, renderMessage, seedDemo, segments, session, sha, type User, winsap } from "@/lib/server";
+import { auth, clientIp, config, db, err, id, json, normalizePhone, now, passwordHash, publicUser, random, RateLimitError, rateLimit, renderMessage, seedDemo, session, sha, type User, winsap } from "@/lib/server";
+import { prepareSms, smsProblem, SMS_MAX } from "@/lib/sms-text";
 
 type Ctx = { params: Promise<{ path: string[] }> };
 type Dict = Record<string, unknown>;
@@ -14,13 +15,32 @@ class HttpError extends Error { constructor(message: string, public status = 400
 const rows = async <T>(sql: string, ...args: unknown[]) => (await db().prepare(sql).bind(...args).all<T>()).results;
 const first = async <T>(sql: string, ...args: unknown[]) => db().prepare(sql).bind(...args).first<T>();
 
+/** Texto final de un SMS: transliterado a GSM-7 y de hasta 160 caracteres (1 crédito). Lanza 422 si no cumple. */
+function smsText(raw: unknown) {
+  const p = prepareSms(String(raw ?? ""));
+  const problem = smsProblem(p);
+  if (problem) throw new HttpError(problem, 422);
+  return p.text;
+}
+/** Revisa que el mensaje de cada destinatario (con sus variables) cumpla las reglas antes de crear o editar la campaña. */
+function checkCampaignText(template: string, recipients: { phone: string; name: string; variables: unknown }[]) {
+  const tpl = prepareSms(template);
+  if (tpl.unsupported.length) throw new HttpError(smsProblem(tpl)!, 422);
+  let bad = 0, sample = "";
+  for (const rc of recipients) {
+    const vars = rc.variables && typeof rc.variables === "object" ? rc.variables as Dict : {};
+    const problem = smsProblem(prepareSms(renderMessage(template, { ...vars, nombre: rc.name, numero: rc.phone })));
+    if (problem) { bad++; if (!sample) sample = `+${rc.phone}: ${problem}`; }
+  }
+  if (bad) throw new HttpError(`${bad} destinatario(s) tendrían un mensaje inválido (máximo ${SMS_MAX} caracteres con sus datos incluidos). Ej: ${sample}`, 422);
+}
+
 async function sendOne(user: User, rawPhone: unknown, rawMessage: unknown, campaignId: string | null = null) {
   const phone = normalizePhone(rawPhone);
-  const message = String(rawMessage || "").trim();
   if (!phone) throw new HttpError("Número paraguayo inválido");
-  if (!message || message.length > 1000) throw new HttpError("El mensaje debe tener entre 1 y 1000 caracteres");
+  const message = smsText(rawMessage);
   if (await first("SELECT id FROM optouts WHERE user_id=? AND phone=?", user.id, phone)) throw new HttpError("El número está en tu lista de exclusión", 422);
-  const cost = segments(message);
+  const cost = 1; // el texto ya está garantizado en 1 SMS (<=160 GSM-7)
   const reserve = await db().prepare("UPDATE users SET balance=balance-? WHERE id=? AND balance>=?").bind(cost, user.id, cost).run();
   if (!reserve.meta.changes) throw new HttpError("Saldo insuficiente", 402);
   const messageId = id();
@@ -318,6 +338,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const unique = new Map<string, Dict>();
     for (const item of items) { const phone = normalizePhone(item.phone); if (phone && !unique.has(phone)) unique.set(phone, item); }
     if (!unique.size) return err("No hay números válidos");
+    checkCampaignText(text, [...unique].map(([phone, item]) => ({ phone, name: String(item.name || "").slice(0, 100), variables: item.variables })));
     const scheduled = data.scheduledAt ? new Date(String(data.scheduledAt)).toISOString() : null;
     const campaignId = id();
     await db().prepare("INSERT INTO campaigns(id,user_id,name,body,scheduled_at,status,total,created_at) VALUES(?,?,?,?,?,?,?,?)")
@@ -341,6 +362,8 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     if (!["draft", "scheduled", "paused"].includes(camp.status)) return err("Sólo se pueden editar campañas pendientes o pausadas");
     const name = String(data.name || "").trim().slice(0, 120), text = String(data.body || "").trim().slice(0, 1000);
     if (!name || !text) return err("El nombre y el mensaje son obligatorios");
+    const recs = await rows<{ phone: string; name: string; variables: string }>("SELECT phone,name,variables FROM recipients WHERE campaign_id=? LIMIT 2000", path[1]);
+    checkCampaignText(text, recs.map(x => ({ phone: x.phone, name: x.name, variables: (() => { try { return JSON.parse(x.variables || "{}"); } catch { return {}; } })() })));
     let scheduled: string | null = null;
     if (data.scheduledAt) { const d = new Date(String(data.scheduledAt)); if (isNaN(d.getTime())) return err("Fecha de programación inválida"); scheduled = d.toISOString(); }
     const status = camp.status === "paused" ? "paused" : scheduled ? "scheduled" : "draft";

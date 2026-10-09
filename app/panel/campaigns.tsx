@@ -2,8 +2,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ban, CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Eye, FileSpreadsheet, Pause, Pencil, Play, Plus, Search, Send, Trash2, X } from "lucide-react";
+import { prepareSms, SMS_MAX } from "@/lib/sms-text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { type Ask, type Campaign, type Contact, type Recipient, Empty, Status, date, fmt, normalizePhone, parseSpreadsheet, pct, renderMessage, request, segmentsOf } from "./shared";
+import { type Ask, type Campaign, type Contact, type Recipient, Empty, Status, date, fmt, normalizePhone, parseSpreadsheet, pct, renderMessage, request, segmentsOf, smsIssue } from "./shared";
 
 const FILTERS: [string, string][] = [["all", "Todas"], ["draft", "Borradores"], ["scheduled", "Programadas"], ["sending", "Enviando"], ["paused", "Pausadas"], ["completed", "Completadas"], ["cancelled", "Canceladas"]];
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -160,15 +161,17 @@ function Wizard({ init, balance, ask, flash, onClose, onCreated }: { init: { nam
   const calc = useMemo(() => {
     const seen = new Set<string>(); const valid: Recipient[] = []; let invalid = 0, dups = 0, excluded = 0;
     for (const r of raw) { const p = normalizePhone(r.phone); if (!p) { invalid++; continue; } if (seen.has(p)) { dups++; continue; } seen.add(p); if (optouts.has(p)) { excluded++; continue; } valid.push({ ...r, phone: p }); }
-    const credits = valid.reduce((a, r) => a + Math.max(1, segmentsOf(renderMessage(body, { ...r.variables, nombre: r.name, numero: r.phone }))), 0);
-    return { valid, invalid, dups, excluded, credits };
+    let bad = 0, badSample = "";
+    for (const r of valid) { const issue = smsIssue(renderMessage(body, { ...r.variables, nombre: r.name, numero: r.phone })); if (issue) { bad++; if (!badSample) badSample = `+${r.phone}: ${issue}`; } }
+    const credits = valid.length;
+    return { valid, invalid, dups, excluded, credits, bad, badSample };
   }, [raw, optouts, body]);
 
   const sample = calc.valid[0];
   const preview = renderMessage(body, { ...(sample?.variables || {}), nombre: sample?.name || "María", numero: sample?.phone || "595981234567" });
   const tooMany = calc.valid.length > 2000, short = calc.credits > balance;
   const step1 = name.trim().length > 0 && body.trim().length > 0 && body.length <= 1000;
-  const step2 = calc.valid.length > 0 && !tooMany;
+  const step2 = calc.valid.length > 0 && !tooMany && calc.bad === 0;
   const step3 = when !== "later" || (!!schedule && new Date(schedule).getTime() > Date.now());
   const insert = (v: string) => { const el = bodyRef.current; const s = el?.selectionStart ?? body.length, e = el?.selectionEnd ?? body.length; setBody(b => b.slice(0, s) + v + b.slice(e)); setTimeout(() => { el?.focus(); el?.setSelectionRange(s + v.length, s + v.length); }); };
 
@@ -193,7 +196,9 @@ function Wizard({ init, balance, ask, flash, onClose, onCreated }: { init: { nam
           <label className="wz-label">Nombre de la campaña<input value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Promoción de octubre" maxLength={120} autoFocus /></label>
           <label className="wz-label">Mensaje<textarea ref={bodyRef} rows={6} value={body} onChange={e => setBody(e.target.value)} placeholder="Hola {nombre}, tenemos una novedad para vos…" /></label>
           <div className="wz-chips"><span>Insertar:</span><button onClick={() => insert("{nombre}")}>{"{nombre}"}</button><button onClick={() => insert("{numero}")}>{"{numero}"}</button></div>
-          <div className="form-meta"><span>{body.length}/1000 caracteres</span><span>{segmentsOf(body)} crédito(s) por mensaje</span></div>
+          <div className="form-meta"><span className={prepareSms(preview).length > SMS_MAX ? "txt-bad" : ""}>{prepareSms(preview).length}/{SMS_MAX} caracteres (con datos de ejemplo)</span><span>1 crédito por mensaje</span></div>
+          {prepareSms(body).changed && <div className="wz-note">Los acentos (á, í, ó, ú) y comillas especiales se envían sin tilde para que el SMS no pase de 160 caracteres. La ñ se mantiene.</div>}
+          {calc.bad > 0 && <div className="wz-warn">{calc.bad} destinatario(s) superan los {SMS_MAX} caracteres o tienen caracteres no admitidos. {calc.badSample}</div>}
         </>}
         {step === 2 && <>
           <div className="wz-tabs">{([["contacts", `Mis contactos (${contacts.length})`], ["paste", "Pegar lista"], ["file", "Excel / CSV"]] as const).map(([k, l]) => <button key={k} className={source === k ? "on" : ""} onClick={() => setSource(k)}>{l}</button>)}</div>

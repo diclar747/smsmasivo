@@ -6,3 +6,25 @@
 .docs-layout article { background: white; border: 1px solid #e2eeea; border-radius: 17px; padding: clamp(24px,4vw,50px); }.docs-layout section { scroll-margin-top: 30px; padding-bottom: 35px; margin-bottom: 35px; border-bottom: 1px solid #e8f0ed; }.docs-layout section:last-child { border: 0; margin-bottom: 0; }.docs-layout h2 { font-size: 24px; letter-spacing: -.04em; margin: 0 0 13px; }.docs-layout h3 { font-size: 16px; margin: 30px 0 10px; }.docs-layout p { color: #67827e; line-height: 1.75; font-size: 13px; }.docs-layout p a,.docs-back { color: #078c6e; font-weight: 750; }.docs-layout code { background: #e9f5f0; color: #0c795f; padding: 2px 5px; border-radius: 4px; font-size: .94em; }
 .docs-callout { border-left: 3px solid #28bc90; background: #effaf5; padding: 16px; color: #4a786d; font-size: 12px; line-height: 1.7; border-radius: 0 8px 8px 0; }.endpoints>div { padding: 16px 0; border-bottom: 1px solid #edf2f0; }.endpoints>div>div { display: flex; align-items: center; gap: 12px; }.endpoints>div p { margin: 7px 0 0; font-size: 11px; }.method { display: inline-block; min-width: 56px; text-align: center; font-size: 10px; font-weight: 850; padding: 5px 6px; border-radius: 5px; background: #eaf7f0; color: #118963; }.method.get { background: #e9f2ff; color: #4b78ba; }.method.put { background: #fff3df; color: #b67a1a; }.method.delete { background: #ffeaf0; color: #bd5464; }.docs-back { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; margin-top: 10px; }
 @media(max-width:760px){.docs-layout { grid-template-columns: 1fr; gap: 20px; }.docs-layout aside { position: static; display: flex; overflow-x: auto; }.docs-layout aside a { white-space: nowrap; }.docs-hero { padding-block: 45px; }}
+.tester { display: grid; gap: 14px; background: #fff; border: 1px solid #dfe7e5; border-radius: 16px; padding: 20px; }
+.tester-row { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; }
+.tester-field { display: grid; gap: 6px; min-width: 0; }
+.tester-field.grow { flex: 1 1 280px; }
+.tester-field > span { font-size: 13px; font-weight: 700; color: #31575a; }
+.tester-field input, .tester-field select, .tester-field textarea { width: 100%; font: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid #cfd9d7; border-radius: 10px; background: #fff; color: inherit; }
+.tester-field textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.tester-field small { font-size: 12px; color: #5d7072; }
+.tester-field small.bad, .tester-err { color: #b42318; font-weight: 600; }
+.tester-key { display: flex; gap: 8px; } .tester-key input { flex: 1; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.tester-key button { border: 1px solid #cfd9d7; background: #f6f8fa; border-radius: 10px; padding: 0 14px; font: inherit; font-size: 13px; cursor: pointer; }
+.tester-endpoint { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f6f8fa; border-radius: 10px; font-size: 13px; overflow-x: auto; max-width: 100%; }
+.tester-endpoint .m { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: #0d7668; color: #fff; }
+.tester-endpoint .m-POST { background: #1d4ed8; } .tester-endpoint .m-DELETE { background: #b42318; } .tester-endpoint .m-PUT { background: #9a6700; }
+.tester-note { margin: 0; font-size: 13px; color: #5d7072; }
+.tester-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tester-run { background: #0d7668; color: #fff; border: 0; border-radius: 10px; padding: 11px 22px; font: inherit; font-weight: 700; cursor: pointer; }
+.tester-run:disabled { opacity: .5; cursor: not-allowed; }
+.tester-curl summary { cursor: pointer; font-size: 13px; color: #31575a; font-weight: 600; }
+.tester-curl pre, .tester-out pre { margin: 8px 0 0; padding: 14px; background: #0f1f1d; color: #d9f1ec; border-radius: 10px; font-size: 12.5px; overflow: auto; max-height: 420px; white-space: pre-wrap; word-break: break-word; }
+.tester-status { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.tester-status.ok { background: #dcf5ec; color: #0b6b4d; } .tester-status.ko { background: #fde4e1; color: #b42318; }

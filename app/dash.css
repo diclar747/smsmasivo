@@ -349,3 +349,4 @@
 .toast { bottom: 94px !important; }
 @media (prefers-reduced-motion: reduce) { .wa-float::after { animation: none; } }
 @media (max-width: 560px) { .wa-float { right: 14px; bottom: 14px; } }
+.txt-bad { color: #b42318; font-weight: 700; }
