@@ -1,5 +1,7 @@
 import Link from "@/components/plain-link";
 import ApiTester from "./tester";
+import { SiteFooter, SiteNav } from "@/components/site-chrome";
+import { seoPages } from "@/lib/seo-pages";
 import { ArrowLeft, ArrowUpRight, Code2, MessageSquareText } from "lucide-react";
 
 const endpoints = [
@@ -33,10 +35,9 @@ const endpoints = [
   ["DELETE", "/api/keys/:id", "Revocar una clave."],
 ];
 
-export default function Docs() { return <main className="docs-page">
-  <div className="docs-nav wrap"><Link className="brand" href="/"><span className="brand-mark"><MessageSquareText size={20}/></span><span>nexo<span className="brand-dot">sms</span></span></Link><Link href="/panel" className="btn btn-light">Ir al panel <ArrowUpRight size={16}/></Link></div>
-  <div className="docs-hero wrap"><span className="label"><Code2 size={14}/> RECURSOS PARA DESARROLLADORES</span><h1>API de NexoSMS</h1><p>Enviá mensajes, administrá campañas y consultá saldo desde tu aplicación. Todas las rutas usan JSON y requieren HTTPS en producción.</p></div>
-  <div className="docs-layout wrap"><aside><a href="#inicio">Inicio rápido</a><a href="#auth">Autenticación</a><a href="#probar">Probar en línea</a><a href="#reglas">Reglas del mensaje</a><a href="#endpoints">Endpoints</a><a href="#variables">Personalización</a><a href="#estados">Estados y créditos</a><a href="#errores">Errores</a></aside><article>
+export default function Docs() { return <div className="site"><SiteNav /><main className="container">
+  <header className="seo-hero"><nav aria-label="Ruta" className="crumbs"><Link href="/">Inicio</Link> / <span>Documentación</span></nav><h1>API de NexoSMS</h1><p className="lead">Enviá mensajes, administrá campañas y consultá saldo desde tu aplicación. Todas las rutas usan JSON y HTTPS.</p></header>
+  <div className="docs-layout"><aside className="docs-toc" aria-label="En esta página"><a href="#inicio">Inicio rápido</a><a href="#auth">Autenticación</a><a href="#probar">Probar en línea</a><a href="#reglas">Reglas del mensaje</a><a href="#endpoints">Endpoints</a><a href="#variables">Personalización</a><a href="#estados">Estados y créditos</a><a href="#errores">Errores</a></aside><article className="prose">
     <section id="inicio"><h2>Inicio rápido</h2><p>Generá una clave en <Link href="/panel">Panel → API</Link>. Enviá la clave en <code>X-API-Key</code>. En el navegador, la cookie de sesión se envía automáticamente.</p><pre className="docs-code">curl -X POST https://TU-DOMINIO/api/messages -H &quot;X-API-Key: sms_TU_CLAVE&quot; -H &quot;Content-Type: application/json&quot; -d &apos;{`{"phone":"595981234567","message":"Hola desde NexoSMS"}`}&apos;</pre><div className="docs-callout">Los números se normalizan al formato 5959XXXXXXXX. En modo demo el envío queda como <code>simulado</code>. En producción, <code>aceptado</code> indica recepción por la API de Winsap, no entrega final al dispositivo.</div></section>
     <section id="auth"><h2>Autenticación</h2><p>Usá <code>X-API-Key</code> para integraciones externas. Guardá la clave en el servidor de tu aplicación. Cada clave accede sólo a los datos de su usuario y puede revocarse desde el panel.</p></section>
     <section id="probar"><h2>Probar la API en línea</h2><p>Pegá tu API Key y probá cada operación contra tu cuenta real: consultar saldo, enviar un SMS, ver el historial y consultar campañas. Si el envío real está activo, <b>los SMS que envíes aquí son reales y consumen créditos</b>.</p><ApiTester/></section>
@@ -46,4 +47,4 @@ export default function Docs() { return <main className="docs-page">
     <section id="estados"><h2>Estados y créditos</h2><p>Cada SMS cuesta 1 crédito: el texto debe tener hasta 160 caracteres (ver Reglas del mensaje). El saldo se reserva antes del envío y se devuelve si Winsap rechaza la solicitud. Los estados incluyen pendiente, simulado, aceptado y fallido.</p><p>La compra crea un link de Winsap para pagar con tarjeta o QR. Volver del checkout no acredita saldo: la plataforma verifica el pago, el monto y el link antes de acreditar.</p></section>
     <section id="errores"><h2>Errores</h2><p>Los errores devuelven JSON con un campo <code>error</code>. Códigos: 400 datos inválidos, 401 autenticación, 402 saldo insuficiente, 403 permisos, 404 recurso no encontrado y 422 número excluido, 429 límite de solicitudes (ver encabezado Retry-After) y 503 integración aún no activada.</p><Link href="/" className="docs-back"><ArrowLeft size={16}/> Volver al inicio</Link></section>
   </article></div>
-</main> }
+</main><SiteFooter pages={seoPages()} /></div> }

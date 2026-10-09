@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { prepareSms, SMS_MAX, smsProblem } from "@/lib/sms-text";
 
 type Field = { name: string; label: string; where: "path" | "query" | "body"; placeholder?: string; def?: string; area?: boolean; sms?: boolean; check?: boolean; json?: boolean };
@@ -39,6 +39,8 @@ export default function ApiTester() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [origin, setOrigin] = useState("https://TU-DOMINIO");
+  useEffect(() => setOrigin(location.origin), []);
   const [out, setOut] = useState<{ status: number; ms: number; text: string } | null>(null);
 
   const val = (f: Field) => values[`${id}.${f.name}`] ?? f.def ?? "";
@@ -67,7 +69,7 @@ export default function ApiTester() {
   const smsIssue = smsInfo ? smsProblem(smsInfo) : null;
   const blocked = !key.trim() || !!built.error || (action.id === "send" && !!smsIssue);
 
-  const curl = `curl ${action.method === "GET" ? "" : `-X ${action.method} `}"${typeof location === "undefined" ? "https://TU-DOMINIO" : location.origin}${built.url}" \\\n  -H "X-API-Key: ${key.trim() ? key.trim().slice(0, 8) + "…" : "sms_TU_CLAVE"}"${built.body ? ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(built.body)}'` : ""}`;
+  const curl = `curl ${action.method === "GET" ? "" : `-X ${action.method} `}"${origin}${built.url}" \\\n  -H "X-API-Key: ${key.trim() ? key.trim().slice(0, 8) + "…" : "sms_TU_CLAVE"}"${built.body ? ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(built.body)}'` : ""}`;
 
   function start() { if (action.danger) setConfirming(true); else void run(); }
   async function run() {

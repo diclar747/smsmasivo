@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "@/components/plain-link";
-import { MessageSquareText } from "lucide-react";
+import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { prepareSms, SMS_MAX } from "@/lib/sms-text";
-import { abs, LAST_MOD, SITE_NAME, SITE_URL, WHATSAPP_PHONE } from "@/lib/site";
-import { type SeoPage, seoPages } from "@/lib/seo-pages";
+import { abs, DEFAULT_PRICE, LAST_MOD, SITE_NAME, SITE_URL, WHATSAPP_PHONE } from "@/lib/site";
+import { blurb, type SeoPage, seoPages } from "@/lib/seo-pages";
 
 export function pageMetadata(page: SeoPage): Metadata {
   const url = abs(`/${page.slug}`);
@@ -29,34 +29,15 @@ export function faqLd(faq: { q: string; a: string }[]) {
   return { "@type": "FAQPage", mainEntity: faq.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) };
 }
 
-export function SiteNav() {
-  return <nav className="land-nav wrap">
-    <Link className="brand" href="/"><span className="brand-mark"><MessageSquareText size={21}/></span><span>nexo<span className="brand-dot">sms</span></span></Link>
-    <div className="land-links"><Link href="/sms-masivo-paraguay">SMS masivo</Link><Link href="/sms-marketing">Marketing</Link><Link href="/api-sms">API</Link><Link href="/precios-sms">Precios</Link></div>
-    <div className="land-actions"><Link className="land-login" href="/login">Ingresar</Link><Link className="btn btn-light" href="/register">Crear cuenta</Link></div>
-  </nav>;
-}
-
-export function SiteFooter({ pages }: { pages: SeoPage[] }) {
-  return <footer className="seo-footer wrap">
-    <div className="seo-footer-grid">
-      <div><Link className="brand" href="/"><span className="brand-mark"><MessageSquareText size={20}/></span><span>nexo<span className="brand-dot">sms</span></span></Link><p>Plataforma de SMS masivos para Paraguay: campañas, API y reportes para empresas.</p></div>
-      <div><h3>Servicios</h3>{pages.slice(0, 7).map(p => <Link key={p.slug} href={`/${p.slug}`}>{p.label}</Link>)}</div>
-      <div><h3>Más</h3>{pages.slice(7).map(p => <Link key={p.slug} href={`/${p.slug}`}>{p.label}</Link>)}<Link href="/docs">Documentación API</Link></div>
-      <div><h3>Legal</h3><Link href="/privacidad">Privacidad</Link><Link href="/terminos">Términos</Link><Link href="/login">Ingresar</Link></div>
-    </div>
-    <small>© 2026 NexoSMS · SMS masivo en todo Paraguay</small>
-  </footer>;
-}
-
 export function Faq({ items }: { items: { q: string; a: string }[] }) {
-  return <div className="seo-faq">{items.map(f => <details key={f.q}><summary>{f.q}</summary><p>{f.a}</p></details>)}</div>;
+  return <div className="faq">{items.map(f => <details key={f.q}><summary>{f.q}</summary><p>{f.a}</p></details>)}</div>;
 }
 
 export default function SeoPageView({ page, price }: { page: SeoPage; price?: number }) {
   const all = seoPages(price);
   const url = abs(`/${page.slug}`);
   const related = page.related.map(slug => all.find(p => p.slug === slug)!).filter(Boolean);
+  const gs = (price ?? DEFAULT_PRICE).toLocaleString("es-PY").replace(/,/g, ".");
   const ld = { "@context": "https://schema.org", "@graph": [
     orgLd,
     { "@type": "WebPage", "@id": `${url}#page`, url, name: page.title, description: page.description, inLanguage: "es-PY", isPartOf: { "@id": `${SITE_URL}/#site` }, dateModified: LAST_MOD },
@@ -64,27 +45,31 @@ export default function SeoPageView({ page, price }: { page: SeoPage; price?: nu
     { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Inicio", item: SITE_URL }, { "@type": "ListItem", position: 2, name: page.label, item: url }] },
     faqLd(page.faq),
   ] };
-  return <main className="landing seo-page">
+  return <div className="site">
     <Ld data={ld} />
     <SiteNav />
-    <header className="seo-hero wrap">
-      <nav aria-label="Ruta" className="seo-crumbs"><Link href="/">Inicio</Link> / <span>{page.label}</span></nav>
-      <h1>{page.h1}</h1>
-      <p className="seo-lead">{page.lead}</p>
-      <div className="hero-buttons"><Link className="btn btn-primary" href="/register">Crear cuenta gratis</Link><Link className="btn btn-outline" href="/docs">Ver documentación API</Link></div>
-    </header>
-    <div className="seo-body wrap">
-      {page.sections.map(s => <section key={s.h2}>
-        <h2>{s.h2}</h2>
-        {s.p?.map(t => <p key={t}>{t}</p>)}
-        {s.ul && <ul>{s.ul.map(t => <li key={t}>{t}</li>)}</ul>}
-        {s.example && <figure className="seo-sms"><div className="bubble">{s.example}</div><figcaption>{s.exampleLabel} · {prepareSms(s.example.replace(/\{[a-z]+\}/g, "María González")).length}/{SMS_MAX} caracteres</figcaption></figure>}
-        {s.code?.map(c => <div key={c.lang} className="seo-code"><b>{c.lang}</b><pre><code>{c.text}</code></pre></div>)}
-      </section>)}
-      <section><h2>Preguntas frecuentes</h2><Faq items={page.faq} /></section>
-      <section className="seo-cta"><div><h2>Empezá a enviar SMS hoy</h2><p>Creá tu cuenta, cargá créditos y enviá tu primera campaña en minutos.</p></div><Link className="btn btn-primary" href="/register">Crear mi cuenta</Link></section>
-      <section><h2>Más información</h2><div className="seo-related">{related.map(r => <Link key={r.slug} href={`/${r.slug}`}><b>{r.label}</b><span>{r.description}</span></Link>)}</div></section>
-    </div>
+    <main className="container">
+      <header className="seo-hero">
+        <nav aria-label="Ruta" className="crumbs"><Link href="/">Inicio</Link> / <span>{page.label}</span></nav>
+        <h1>{page.h1}</h1>
+        <p className="lead">{page.lead}</p>
+      </header>
+      <div className="seo-layout">
+        <article className="prose">
+          {page.sections.map(s => <section key={s.h2}>
+            <h2>{s.h2}</h2>
+            {s.p?.map(t => <p key={t}>{t}</p>)}
+            {s.ul && <ul>{s.ul.map(t => <li key={t}>{t}</li>)}</ul>}
+            {s.example && <figure className="sms-example"><div className="bubble">{s.example}</div><figcaption>{s.exampleLabel}: {prepareSms(s.example.replace(/\{[a-z]+\}/g, "María González")).length}/{SMS_MAX} caracteres</figcaption></figure>}
+            {s.code?.map(c => <div key={c.lang} className="snippet"><b>{c.lang}</b><pre><code>{c.text}</code></pre></div>)}
+          </section>)}
+          <section><h2>Preguntas frecuentes</h2><Faq items={page.faq} /></section>
+          <section><h2>Más información</h2><div className="related">{related.map(r => <Link key={r.slug} href={`/${r.slug}`}><b>{r.label}</b><span>{blurb(r.description)}</span></Link>)}</div></section>
+        </article>
+        <aside className="seo-aside"><div className="aside-price">Gs. {gs}<small> por SMS</small></div><p>Prepago, sin mensualidad. Los créditos no vencen.</p><Link className="btn btn-primary" href="/register">Crear cuenta gratis</Link><Link className="btn btn-ghost" href="/docs">Ver la API</Link></aside>
+      </div>
+      <div className="cta-band"><div><h2>Empezá a enviar SMS hoy</h2><p>Creá tu cuenta, cargá créditos y enviá tu primera campaña en minutos.</p></div><Link className="btn btn-primary btn-lg" href="/register">Crear mi cuenta</Link></div>
+    </main>
     <SiteFooter pages={all} />
-  </main>;
+  </div>;
 }

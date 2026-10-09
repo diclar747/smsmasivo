@@ -9,6 +9,9 @@ export type SeoPage = {
 
 const gs = (n: number) => `Gs. ${n.toLocaleString("es-PY").replace(/,/g, ".")}`;
 
+/** Primera frase de una descripción (no corta en "Gs. 130" ni en "Node.js"). */
+export const blurb = (d: string) => d.split(/\.\s(?=[A-ZÁÉÍÓÚÑ¿¡])/)[0].replace(/\.$/, "");
+
 export const CITIES = "Asunción, San Lorenzo, Luque, Capiatá, Lambaré, Fernando de la Mora, Ñemby, Limpio, Mariano Roque Alonso, Ciudad del Este, Encarnación, Pedro Juan Caballero, Coronel Oviedo, Caaguazú, Villarrica, Concepción, Pilar y Santa Rita";
 export const DEPARTMENTS = "Central, Alto Paraná, Itapúa, Amambay, Canindeyú, Caaguazú, Guairá, Concepción y Ñeembucú";
 

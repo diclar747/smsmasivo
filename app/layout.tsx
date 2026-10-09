@@ -3,7 +3,8 @@ import "./globals.css";
 import "./extra.css";
 import "./docs.css";
 import "./dash.css";
-import "./seo.css";
+import "./site.css";
+import "./theme-vars.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nexosms.cnid.com.py"),
@@ -20,7 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es-PY">
+    <html lang="es-PY" data-theme="light" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("nexosms-theme");document.documentElement.dataset.theme=t==="dark"?"dark":"light"}catch(e){}` }} /></head>
       <body className="antialiased">
         {children}
         <a className="wa-float" href="https://wa.me/595994854167?text=Hola%2C%20quiero%20hacer%20una%20consulta%20sobre%20NexoSMS" target="_blank" rel="noopener noreferrer" aria-label="Consultas por WhatsApp sobre NexoSMS" title="Consultas por WhatsApp">

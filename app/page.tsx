@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "@/components/plain-link";
+import { BarChart3, CalendarClock, Check, Code2, MessageCircle, Send, Users } from "lucide-react";
+import Composer from "@/components/composer";
 import LandingSeo from "@/components/landing-seo";
-import { SiteFooter } from "@/components/seo-page";
+import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { getPrice } from "@/lib/price";
 import { seoPages } from "@/lib/seo-pages";
 import { SITE_URL } from "@/lib/site";
-import { ArrowUpRight, BarChart3, CalendarClock, Check, Code2, FileSpreadsheet, MessageSquareText, Sparkles, Zap } from "lucide-react";
 
 const TITLE = "SMS masivo Paraguay | Envío de SMS a Tigo, Claro, Personal y Vox";
 const DESC = "Plataforma de SMS masivos en Paraguay: campañas, SMS marketing, cobranzas y API para empresas. Enviá a Tigo, Claro, Personal y Vox. Sin mensualidad.";
@@ -16,17 +17,86 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: [`${SITE_URL}/og-image.png`] },
 };
 
+const CAPS = [
+  [Send, "Campañas masivas", "Enviá a miles de contactos a la vez, ahora o a la hora que elijas. Pausá, editá o cancelá mientras corre."],
+  [Users, "Contactos sin vueltas", "Pegá números o importá un Excel o CSV. Se validan, se limpian y se eliminan los repetidos."],
+  [CalendarClock, "Mensajes programados", "Dejá lista la campaña del lunes el viernes. Se envía sola en la fecha y hora que definas."],
+  [BarChart3, "Reportes claros", "Qué se envió, qué falló y cuánto gastaste, por fecha y por campaña. Exportable a CSV."],
+  [MessageCircle, "Un toque a WhatsApp", "Sumá un enlace directo para que el cliente te escriba apenas lea el SMS."],
+  [Code2, "API para tu sistema", "Conectá tu CRM, tienda o ERP. Probá cada llamada en línea con tu API Key."],
+] as const;
+
 export default async function Home() {
   const price = await getPrice();
-  return <main className="landing">
-    <nav className="land-nav wrap"><Link className="brand" href="/"><span className="brand-mark"><MessageSquareText size={21}/></span><span>nexo<span className="brand-dot">sms</span></span></Link><div className="land-links"><a href="#funciones">Funciones</a><a href="#como-funciona">Cómo funciona</a><Link href="/precios-sms">Precios</Link><Link href="/docs">API</Link></div><div className="land-actions"><Link className="land-login" href="/login">Ingresar</Link><Link className="btn btn-light" href="/register">Crear cuenta <ArrowUpRight size={17}/></Link></div></nav>
-    <section className="hero wrap"><div className="hero-copy"><div className="eyebrow"><span className="pulse"/> PLATAFORMA SMS PARA PARAGUAY</div><h1>Cada mensaje<br/>cuenta. <em>Hacé que<br/>llegue.</em></h1><p>SMS masivo en Paraguay: campañas, recordatorios y notificaciones desde un solo lugar. Llegá a clientes de Tigo, Claro, Personal y Vox con control, personalización y reportes claros.</p><div className="hero-buttons"><Link className="btn btn-primary" href="/register">Empezar ahora <ArrowUpRight size={18}/></Link><Link className="btn btn-outline" href="/panel">Explorar panel</Link></div><div className="hero-trust"><div className="avatars"><span>M</span><span>C</span><span>A</span></div><div><strong>Todo tu SMS, en orden</strong><small>Desde un envío hasta miles de contactos</small></div></div></div>
-      <div className="hero-art" aria-label="Vista previa del panel de campañas"><div className="mock-toolbar"><div className="mock-brand"><span className="brand-mark small"><MessageSquareText size={13}/></span>nexosms <span className="mock-tag">Panel</span></div><div className="mock-user">AG</div></div><div className="mock-content"><div className="mock-heading"><span>Buen día, Andrea 👋</span><small>Así van tus campañas hoy</small></div><div className="mock-metrics"><div><span>SMS enviados</span><strong>12.480</strong><small>↗ +18,4% este mes</small></div><div><span>Entregados</span><strong>12.216</strong><small>97,9% aceptados</small></div><div><span>Saldo disponible</span><strong>4.250</strong><small>créditos SMS</small></div></div><div className="mock-chart"><div className="mock-chart-title"><strong>Actividad de envíos</strong><small>Últimos 7 días</small></div><div className="bars">{[42,68,55,80,64,94,76,100,67,82,95,71].map((h,i)=><span key={i} style={{height:`${h}%`}}/>)}</div></div><div className="mock-bottom"><div><span className="dot green"/> Promoción Primavera <small>Enviada · 1.850 destinatarios</small></div><strong>98,2%</strong></div></div><div className="float-badge"><span className="float-icon"><Check size={17}/></span><div><strong>Campaña completada</strong><small>Tu mensaje está en camino</small></div></div></div>
-    </section><div className="operator-strip"><div className="wrap"><span>UN MENSAJE. TODO PARAGUAY.</span><div><strong>TIGO</strong><strong>CLARO</strong><strong>PERSONAL</strong><strong>VOX</strong></div></div></div>
-    <section className="features wrap" id="funciones"><div className="section-heading"><span className="label">TODO EN UNA SOLA PLATAFORMA</span><h2>Tu operación SMS,<br/>simple y poderosa.</h2><p>De la primera idea al último reporte. Cada herramienta está pensada para que trabajes más rápido y con más claridad.</p></div><div className="feature-grid"><article className="feature-card feature-wide"><div className="feature-icon"><MessageSquareText/></div><h3>Campañas a tu manera</h3><p>Enviá al instante o programá para el momento ideal. Editá borradores, seguí el avance y revisá cada destinatario.</p><div className="feature-mini"><div><span className="dot green"/> Promoción de octubre <small>Programada para las 09:00</small></div><CalendarClock size={21}/></div></article><article className="feature-card"><div className="feature-icon"><FileSpreadsheet/></div><h3>Contactos sin fricción</h3><p>Importá Excel o CSV, pegá números desde un TXT y personalizá con variables como <code>{'{nombre}'}</code> o <code>{'{fecha}'}</code>.</p></article><article className="feature-card"><div className="feature-icon"><BarChart3/></div><h3>Reportes que hablan claro</h3><p>Filtrá por fecha, campaña o estado. Consultá los resultados y descargá el historial de tus envíos.</p></article><article className="feature-card"><div className="feature-icon"><Code2/></div><h3>API lista para integrar</h3><p>Conectá tu sistema para enviar SMS, consultar saldo y lanzar campañas con una API documentada.</p><Link className="text-link" href="/docs">Ver documentación <ArrowUpRight size={16}/></Link></article><article className="feature-card"><div className="feature-icon"><Zap/></div><h3>Un clic hacia WhatsApp</h3><p>Incluí un enlace wa.me en tus SMS y ayudá a que cada cliente inicie una conversación con tu negocio.</p></article><article className="feature-card"><div className="feature-icon"><CalendarClock/></div><h3>SMS programados</h3><p>Elegí el día y la hora (horario de Paraguay) y tu mensaje sale en ese momento, sin que tengas que estar pendiente.</p><ul className="feature-list"><li><Check size={14}/> Programá una campaña o un recordatorio</li><li><Check size={14}/> Editá, detené o reanudá antes del envío</li><li><Check size={14}/> Enviá ahora con un clic si cambia el plan</li><li><Check size={14}/> Seguí el avance y cada destinatario</li></ul></article></div></section>
-    <section className="steps" id="como-funciona"><div className="wrap"><div className="section-heading center"><span className="label">ASÍ DE FÁCIL</span><h2>De tu lista al celular<br/>en tres pasos.</h2></div><div className="step-grid"><div><span>01</span><h3>Cargá tus contactos</h3><p>Importá Excel, CSV o pegá números. Revisá y ordená tu base.</p></div><div><span>02</span><h3>Escribí tu mensaje</h3><p>Personalizá el texto y elegí cuándo enviarlo.</p></div><div><span>03</span><h3>Medí cada envío</h3><p>Controlá aceptación, saldo y resultados en tiempo real.</p></div></div></div></section>
-    <LandingSeo pages={seoPages(price)} price={price}/>
-    <section className="cta wrap"><div><span className="label">EMPEZÁ HOY</span><h2>Hablemos con tus clientes.</h2><p>Tu próximo mensaje puede ser el inicio de una gran conversación.</p></div><Link className="btn btn-dark" href="/register">Crear mi cuenta <ArrowUpRight size={18}/></Link><Sparkles className="cta-spark" size={140}/></section>
-    <SiteFooter pages={seoPages(price)}/>
-  </main>;
+  const pages = seoPages(price);
+  const gs = price.toLocaleString("es-PY").replace(/,/g, ".");
+  return <div className="site">
+    <SiteNav />
+    <main>
+      <div className="container hero">
+        <div>
+          <h1>SMS masivo en Paraguay, claro y sin sorpresas</h1>
+          <p className="lead">Enviá campañas a clientes de Tigo, Claro, Personal y Vox desde el navegador o con una API. Cada mensaje de hasta 160 caracteres cuesta 1 crédito, y lo ves antes de enviar.</p>
+          <div className="hero-cta"><Link className="btn btn-primary btn-lg" href="/register">Crear cuenta gratis</Link><Link className="btn btn-ghost btn-lg" href="/docs">Ver la API</Link></div>
+          <p className="hero-note">Prepago, sin mensualidad ni contrato.</p>
+        </div>
+        <Composer price={price} />
+      </div>
+
+      <div className="container"><div className="reach"><p>Llegamos a clientes de</p><ul>
+        <li><Link href="/sms-tigo">Tigo</Link></li><li><Link href="/sms-claro">Claro</Link></li><li><Link href="/sms-personal">Personal</Link></li><li><Link href="/sms-vox">Vox</Link></li>
+      </ul></div></div>
+
+      <section className="section container" id="como-funciona">
+        <div className="section-head"><h2>De tu lista al celular en tres pasos</h2><p>Sin instalar nada y sin hablar con nadie.</p></div>
+        <ol className="steps">
+          <li><h3>Cargá tus contactos</h3><p>Pegá los números o subí un archivo. Detectamos los inválidos y los repetidos por vos.</p></li>
+          <li><h3>Escribí el mensaje</h3><p>Usá el nombre de cada cliente y otros datos. El contador te avisa antes de pasarte de 160.</p></li>
+          <li><h3>Enviá o programá</h3><p>Mirá cuántos créditos usa la campaña y lanzala. Seguís el resultado en tiempo real.</p></li>
+        </ol>
+      </section>
+
+      <section className="section container" id="funciones">
+        <div className="section-head"><h2>Lo necesario para comunicarte con tus clientes</h2><p>Pensado para negocios de Paraguay: simple de usar y preciso en el costo.</p></div>
+        <div className="caps">{CAPS.map(([Icon, title, text]) => <div key={title}><h3><Icon size={20} aria-hidden/>{title}</h3><p>{text}</p></div>)}</div>
+      </section>
+
+      <section className="section container" id="api">
+        <div className="split">
+          <div className="section-head" style={{ marginBottom: 0 }}>
+            <h2>Una llamada y el SMS sale</h2>
+            <p>Enviá desde tu aplicación con una API REST. Consultá el saldo, el historial y el estado de tus campañas con la misma clave.</p>
+            <div className="hero-cta"><Link className="btn btn-primary" href="/api-sms">Conocer la API</Link><Link className="btn btn-ghost" href="/docs">Probarla en línea</Link></div>
+          </div>
+          <div>
+            <div className="code"><header><span>POST /api/messages</span><span>cURL</span></header><pre>{`curl -X POST https://nexosms.cnid.com.py/api/messages \\
+  -H "X-API-Key: sms_TU_CLAVE" \\
+  -H "Content-Type: application/json" \\
+  -d '{"phone":"0981123456",
+       "message":"Tu código es 482915"}'`}</pre></div>
+            <div className="code"><header><span>Respuesta</span><span>201</span></header><pre>{`{ "message": { "status": "aceptado",
+               "segments": 1 } }`}</pre></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section price-band" id="precios" style={{ marginTop: 0 }}>
+        <div className="container price-grid">
+          <div className="price-num">Gs. {gs}<small>por SMS, hasta 160 caracteres</small></div>
+          <ul className="checks">
+            <li><Check size={18} aria-hidden/>Comprás los créditos que necesitás, desde 1.000 SMS.</li>
+            <li><Check size={18} aria-hidden/>Los créditos no vencen y no hay mensualidad.</li>
+            <li><Check size={18} aria-hidden/>Pagás con tarjeta o QR y el saldo se acredita solo.</li>
+            <li><Check size={18} aria-hidden/>Si un envío es rechazado, el crédito vuelve a tu saldo.</li>
+          </ul>
+          <Link className="btn btn-primary btn-lg" href="/precios-sms">Ver precios</Link>
+        </div>
+      </section>
+
+      <LandingSeo pages={pages} price={price} />
+
+      <div className="container"><div className="cta-band"><div><h2>Hablemos con tus clientes</h2><p>Creá tu cuenta y mandá tu primera campaña hoy.</p></div><Link className="btn btn-primary btn-lg" href="/register">Crear mi cuenta</Link></div></div>
+    </main>
+    <SiteFooter pages={pages} />
+  </div>;
 }

@@ -1,6 +1,6 @@
 import Link from "@/components/plain-link";
 import { Faq, faqLd, Ld, orgLd } from "@/components/seo-page";
-import { CITIES, DEPARTMENTS, type SeoPage } from "@/lib/seo-pages";
+import { blurb, CITIES, DEPARTMENTS, type SeoPage } from "@/lib/seo-pages";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const landingFaq = (price: number) => [
@@ -24,20 +24,16 @@ export function landingJsonLd(price: number) {
 export default function LandingSeo({ pages, price }: { pages: SeoPage[]; price: number }) {
   return <>
     <Ld data={landingJsonLd(price)} />
-    <section className="seo-block wrap" id="soluciones">
-      <span className="label">SOLUCIONES SMS</span>
-      <h2>Servicio de SMS masivo para cada necesidad</h2>
-      <p>Marketing, cobranzas, notificaciones, verificación por código y API: elegí cómo querés usar el SMS en tu empresa.</p>
-      <div className="seo-tiles">{pages.map(p => <Link key={p.slug} href={`/${p.slug}`}><b>{p.label}</b><span>{p.description}</span></Link>)}</div>
+    <section className="section container" id="soluciones">
+      <div className="section-head"><h2>Servicio de SMS masivo para cada necesidad</h2><p>Marketing, cobranzas, notificaciones, verificación por código y API: elegí cómo usar el SMS en tu empresa.</p></div>
+      <ul className="index">{pages.map(p => <li key={p.slug}><Link href={`/${p.slug}`}><b>{p.label}</b><span>{blurb(p.description)}</span></Link></li>)}</ul>
     </section>
-    <section className="seo-block wrap" id="cobertura">
-      <span className="label">COBERTURA</span>
-      <h2>SMS a todo Paraguay y a todas las operadoras</h2>
-      <p>Enviá mensajes a clientes de <Link href="/sms-tigo">Tigo</Link>, <Link href="/sms-claro">Claro</Link>, <Link href="/sms-personal">Personal</Link> y <Link href="/sms-vox">Vox</Link> en todo el país: {CITIES}. Llegamos a los departamentos {DEPARTMENTS}, y al resto del territorio nacional.</p>
+    <section className="section container" id="cobertura">
+      <div className="section-head"><h2>SMS a todo Paraguay y a todas las operadoras</h2></div>
+      <p className="lead">Enviá mensajes a clientes de <Link href="/sms-tigo">Tigo</Link>, <Link href="/sms-claro">Claro</Link>, <Link href="/sms-personal">Personal</Link> y <Link href="/sms-vox">Vox</Link> en todo el país: {CITIES}. Llegamos a los departamentos {DEPARTMENTS}, y al resto del territorio nacional.</p>
     </section>
-    <section className="seo-block wrap" id="preguntas">
-      <span className="label">PREGUNTAS FRECUENTES</span>
-      <h2>Todo sobre el envío de SMS en Paraguay</h2>
+    <section className="section container" id="preguntas">
+      <div className="section-head"><h2>Preguntas frecuentes sobre el envío de SMS</h2></div>
       <Faq items={landingFaq(price)} />
     </section>
   </>;
