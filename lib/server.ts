@@ -43,6 +43,15 @@ export async function session(userId: string, requestUrl?: string) {
   const secure = !requestUrl || new URL(requestUrl).protocol === "https:" ? "; Secure" : "";
   return `sms_session=${token}; HttpOnly${secure}; SameSite=Lax; Path=/; Max-Age=604800`;
 }
+export class RateLimitError extends Error { constructor(public retryAfter: number) { super("Demasiadas solicitudes. Intentá de nuevo en unos minutos."); } }
+export async function rateLimit(key: string, limit: number, windowSeconds: number) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const start = nowSec - (nowSec % windowSeconds);
+  const row = await db().prepare("INSERT INTO rate_limits(key,window_start,count) VALUES(?,?,1) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN window_start=excluded.window_start THEN count+1 ELSE 1 END, window_start=excluded.window_start RETURNING count")
+    .bind(key, start).first<{ count: number }>();
+  if ((row?.count ?? 1) > limit) throw new RateLimitError(start + windowSeconds - nowSec);
+}
+export const clientIp = (r: Request) => r.headers.get("cf-connecting-ip") || r.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
 export function normalizePhone(input: unknown) {
   const digits = String(input ?? "").replace(/\D/g, "");
   const phone = digits.startsWith("595") ? digits : digits.startsWith("0") ? `595${digits.slice(1)}` : `595${digits}`;

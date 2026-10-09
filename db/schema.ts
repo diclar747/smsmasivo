@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(), name: text("name").notNull(), email: text("email").notNull().unique(),
@@ -50,3 +50,9 @@ export const packages = sqliteTable("packages", {
   id: text("id").primaryKey(), credits: integer("credits").notNull(),
   price: integer("price").notNull(), active: integer("active").notNull().default(0),
 });
+export const rateLimits = sqliteTable("rate_limits", {
+  key: text("key").primaryKey(), windowStart: integer("window_start").notNull(), count: integer("count").notNull().default(0),
+});
+export const optouts = sqliteTable("optouts", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull(), phone: text("phone").notNull(), createdAt: text("created_at").notNull(),
+}, t => [uniqueIndex("optouts_user_phone_idx").on(t.userId, t.phone)]);

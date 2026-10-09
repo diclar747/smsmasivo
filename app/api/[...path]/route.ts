@@ -1,4 +1,4 @@
-import { auth, config, db, err, id, json, normalizePhone, now, passwordHash, publicUser, random, renderMessage, seedDemo, segments, session, sha, type User, winsap } from "@/lib/server";
+import { auth, clientIp, config, db, err, id, json, normalizePhone, now, passwordHash, publicUser, random, RateLimitError, rateLimit, renderMessage, seedDemo, segments, session, sha, type User, winsap } from "@/lib/server";
 
 type Ctx = { params: Promise<{ path: string[] }> };
 type Dict = Record<string, unknown>;
@@ -19,6 +19,7 @@ async function sendOne(user: User, rawPhone: unknown, rawMessage: unknown, campa
   const message = String(rawMessage || "").trim();
   if (!phone) throw new HttpError("Número paraguayo inválido");
   if (!message || message.length > 1000) throw new HttpError("El mensaje debe tener entre 1 y 1000 caracteres");
+  if (await first("SELECT id FROM optouts WHERE user_id=? AND phone=?", user.id, phone)) throw new HttpError("El número está en tu lista de exclusión", 422);
   const cost = segments(message);
   const reserve = await db().prepare("UPDATE users SET balance=balance-? WHERE id=? AND balance>=?").bind(cost, user.id, cost).run();
   if (!reserve.meta.changes) throw new HttpError("Saldo insuficiente", 402);
@@ -74,6 +75,14 @@ async function runCampaign(user: User, campaignId: string) {
         db().prepare("UPDATE campaigns SET sent=sent+1 WHERE id=?").bind(campaignId),
       ]);
     } catch (e) {
+      if (e instanceof HttpError && e.status === 402) {
+        // Sin saldo: devolver el destinatario a la cola y pausar para no marcar toda la campaña como fallida.
+        await db().batch([
+          db().prepare("UPDATE recipients SET status='pending' WHERE id=?").bind(rec.id),
+          db().prepare("UPDATE campaigns SET status='paused' WHERE id=?").bind(campaignId),
+        ]);
+        throw e;
+      }
       await db().batch([
         db().prepare("UPDATE recipients SET status='failed',error=? WHERE id=?").bind(e instanceof Error ? e.message.slice(0, 250) : "Error", rec.id),
         db().prepare("UPDATE campaigns SET failed=failed+1 WHERE id=?").bind(campaignId),
@@ -83,6 +92,11 @@ async function runCampaign(user: User, campaignId: string) {
   const left = await first<{ n: number }>("SELECT COUNT(*) AS n FROM recipients WHERE campaign_id=? AND status='pending'", campaignId);
   if (!left?.n) await db().prepare("UPDATE campaigns SET status='completed' WHERE id=?").bind(campaignId).run();
   return { processed: pending.length, remaining: left?.n || 0 };
+}
+
+async function runCampaignSafe(user: User, campaignId: string) {
+  try { return await runCampaign(user, campaignId); }
+  catch (e) { if (e instanceof HttpError && e.status === 402) return { processed: 0, remaining: -1, paused: true }; throw e; }
 }
 
 async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> {
@@ -100,6 +114,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     return json({ user: user ? publicUser(user) : null, packages, smsLive: config.SMS_LIVE === "true", paymentsLive: config.PAYMENTS_LIVE === "true", googleAvailable: !!config.GOOGLE_CLIENT_ID && !!config.GOOGLE_CLIENT_SECRET });
   }
   if (route === "auth/register" && method === "POST") {
+    await rateLimit(`register:${clientIp(r)}`, 5, 3600);
     const data = await body(r);
     const name = String(data.name || "").trim().slice(0, 100);
     const email = String(data.email || "").toLowerCase().trim();
@@ -112,6 +127,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     return json({ ok: true }, 201, { "Set-Cookie": await session(userId, r.url) });
   }
   if (route === "auth/login" && method === "POST") {
+    await rateLimit(`login:${clientIp(r)}`, 10, 900);
     const data = await body(r);
     const email = String(data.email || "").toLowerCase().trim();
     const user = await first<User>("SELECT * FROM users WHERE email=? AND status='active'", email);
@@ -160,7 +176,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const results = [];
     for (const campaign of due) {
       const owner = await first<User>("SELECT * FROM users WHERE id=?", campaign.user_id);
-      if (owner) results.push({ id: campaign.id, ...(await runCampaign(owner, campaign.id)) });
+      if (owner) results.push({ id: campaign.id, ...(await runCampaignSafe(owner, campaign.id)) });
     }
     return json({ results });
   }
@@ -194,6 +210,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     await db().prepare("DELETE FROM contacts WHERE id=? AND user_id=?").bind(path[1], user.id).run(); return json({ ok: true });
   }
   if (route === "messages" && method === "POST") {
+    await rateLimit(`sms:${user.id}`, 60, 60);
     const data = await body(r); return json({ message: await sendOne(user, data.phone, data.message) }, 201);
   }
   if (route === "campaigns" && method === "GET") return json({ campaigns: await rows("SELECT * FROM campaigns WHERE user_id=? ORDER BY created_at DESC LIMIT 500", user.id) });
@@ -238,7 +255,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
   if (route === "campaigns/process" && method === "POST") {
     const due = await rows<{ id: string }>("SELECT id FROM campaigns WHERE user_id=? AND status IN ('scheduled','sending') AND (scheduled_at IS NULL OR scheduled_at<=?) ORDER BY created_at LIMIT 4", user.id, now());
     const results = [];
-    for (const c of due) results.push({ id: c.id, ...(await runCampaign(user, c.id)) });
+    for (const c of due) results.push({ id: c.id, ...(await runCampaignSafe(user, c.id)) });
     return json({ results });
   }
   if (route === "reports" && method === "GET") {
@@ -286,6 +303,21 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
       db().prepare("INSERT OR IGNORE INTO ledger(id,user_id,delta,reason,created_at) VALUES(?,?,?,?,?)").bind(order.id, user.id, order.credits, `Compra ${order.id}`, now()),
     ]);
     return json({ status: "paid" });
+  }
+  if (route === "optouts" && method === "GET") return json({ optouts: await rows("SELECT * FROM optouts WHERE user_id=? ORDER BY created_at DESC LIMIT 2000", user.id) });
+  if (route === "optouts" && method === "POST") {
+    const data = await body(r);
+    const list = (Array.isArray(data.phones) ? data.phones : [data.phone]).slice(0, 2000);
+    let added = 0;
+    for (const raw of list) {
+      const phone = normalizePhone(raw); if (!phone) continue;
+      const res = await db().prepare("INSERT OR IGNORE INTO optouts(id,user_id,phone,created_at) VALUES(?,?,?,?)").bind(id(), user.id, phone, now()).run();
+      added += res.meta.changes || 0;
+    }
+    return json({ added }, 201);
+  }
+  if (path[0] === "optouts" && path[1] && method === "DELETE") {
+    await db().prepare("DELETE FROM optouts WHERE id=? AND user_id=?").bind(path[1], user.id).run(); return json({ ok: true });
   }
   if (route === "keys" && method === "GET") return json({ keys: await rows("SELECT id,name,prefix,created_at,revoked_at FROM api_keys WHERE user_id=? ORDER BY created_at DESC", user.id) });
   if (route === "keys" && method === "POST") {
@@ -346,7 +378,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
 
 async function safe(r: Request, ctx: Ctx, method: string) {
   try { return await handler(r, ctx, method); }
-  catch (e) { if (e instanceof HttpError) return err(e.message, e.status); console.error("API error", e); return err(e instanceof Error && /invalid|grande|JSON/.test(e.message) ? e.message : "No se pudo completar la operación", 500); }
+  catch (e) { if (e instanceof RateLimitError) return json({ error: e.message }, 429, { "Retry-After": String(e.retryAfter) }); if (e instanceof HttpError) return err(e.message, e.status); console.error("API error", e); return err(e instanceof Error && /invalid|grande|JSON/.test(e.message) ? e.message : "No se pudo completar la operación", 500); }
 }
 export const GET = (r: Request, c: Ctx) => safe(r, c, "GET");
 export const POST = (r: Request, c: Ctx) => safe(r, c, "POST");

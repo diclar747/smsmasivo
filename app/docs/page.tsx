@@ -21,6 +21,9 @@ const endpoints = [
   ["GET", "/api/wallet", "Saldo, movimientos, paquetes y compras."],
   ["POST", "/api/orders", "Crear link de pago: packageId."],
   ["POST", "/api/orders/:id/verify", "Verificar pago y acreditar créditos si fue confirmado."],
+  ["GET", "/api/optouts", "Listar números excluidos. Nunca se les envía SMS."],
+  ["POST", "/api/optouts", "Excluir números: phone o phones: []."],
+  ["DELETE", "/api/optouts/:id", "Quitar un número de la lista de exclusión."],
   ["GET", "/api/keys", "Listar claves sin revelar secretos."],
   ["POST", "/api/keys", "Crear clave API: name. Se muestra una sola vez."],
   ["DELETE", "/api/keys/:id", "Revocar una clave."],
@@ -35,6 +38,6 @@ export default function Docs() { return <main className="docs-page">
     <section id="endpoints"><h2>Endpoints</h2><div className="endpoints">{endpoints.map(([method,path,description])=><div key={method+path}><div><span className={`method ${method.toLowerCase()}`}>{method}</span><code>{path}</code></div><p>{description}</p></div>)}</div><h3>Ejemplo de campaña</h3><pre className="docs-code">{JSON.stringify({name:"Recordatorio de citas",body:"Hola {nombre}, tu cita es el {fecha}.",scheduledAt:"2026-10-12T13:00:00Z",recipients:[{phone:"595981234567",name:"María",variables:{fecha:"12/10"}}]},null,2)}</pre><p>El procesamiento se realiza en lotes de hasta 20 destinatarios. El panel revisa campañas pendientes mientras está abierto. Para ejecutar sin el panel abierto, un programador externo debe invocar <code>POST /api/campaigns/process</code> periódicamente con una clave de la cuenta.</p></section>
     <section id="variables"><h2>Personalización e importación</h2><p>El mensaje admite <code>{'{nombre}'}</code>, <code>{'{numero}'}</code> y las claves de <code>variables</code> de cada destinatario. En el panel podés importar Excel o CSV. Las columnas adicionales se convierten en variables en minúsculas, reemplazando espacios por guiones bajos. También podés pegar líneas como <code>0981234567,María</code>.</p></section>
     <section id="estados"><h2>Estados y créditos</h2><p>El costo se estima por segmentos: 160 caracteres GSM o 70 Unicode en un SMS; los mensajes largos usan segmentos de 153 o 67 caracteres. El saldo se reserva antes del envío y se devuelve si Winsap rechaza la solicitud. Los estados incluyen pendiente, simulado, aceptado y fallido.</p><p>La compra crea un link de Winsap para pagar con tarjeta o QR. Volver del checkout no acredita saldo: la plataforma verifica el pago, el monto y el link antes de acreditar.</p></section>
-    <section id="errores"><h2>Errores</h2><p>Los errores devuelven JSON con un campo <code>error</code>. Códigos: 400 datos inválidos, 401 autenticación, 402 saldo insuficiente, 403 permisos, 404 recurso no encontrado y 503 integración aún no activada.</p><Link href="/" className="docs-back"><ArrowLeft size={16}/> Volver al inicio</Link></section>
+    <section id="errores"><h2>Errores</h2><p>Los errores devuelven JSON con un campo <code>error</code>. Códigos: 400 datos inválidos, 401 autenticación, 402 saldo insuficiente, 403 permisos, 404 recurso no encontrado y 422 número excluido, 429 límite de solicitudes (ver encabezado Retry-After) y 503 integración aún no activada.</p><Link href="/" className="docs-back"><ArrowLeft size={16}/> Volver al inicio</Link></section>
   </article></div>
 </main> }
