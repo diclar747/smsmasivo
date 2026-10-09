@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/plain-link";
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (

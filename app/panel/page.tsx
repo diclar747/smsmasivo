@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/plain-link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, ArrowDownToLine, ArrowRight, BarChart3, CalendarClock, ChevronDown, CircleHelp, Code2, ContactRound, CreditCard, FileSpreadsheet, LayoutDashboard, LogOut, Menu, MessageSquareText, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Search, Send, Settings2, ShieldCheck, Users, Wallet, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";

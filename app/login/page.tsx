@@ -1,13 +1,11 @@
 "use client";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/plain-link";
 import { useEffect, useState } from "react";
 import { ArrowRight, MessageSquareText } from "lucide-react";
 
 export default function Login() {
-  const router = useRouter();
   const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [google,setGoogle]=useState(false);
   useEffect(()=>{fetch("/api/bootstrap").then(r=>r.json() as Promise<{googleAvailable?:boolean}>).then(d=>setGoogle(!!d.googleAvailable)).catch(()=>{})},[]);
-  async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); setError(""); try { const r = await fetch("/api/auth/login", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email,password}) }); const d = await r.json() as {error?:string}; if (!r.ok) throw new Error(d.error); router.push("/panel"); router.refresh(); } catch(e) { setError(e instanceof Error ? e.message : "No se pudo ingresar"); } finally { setBusy(false); } }
+  async function submit(e: React.FormEvent) { e.preventDefault(); setBusy(true); setError(""); try { const r = await fetch("/api/auth/login", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email,password}) }); const d = await r.json() as {error?:string}; if (!r.ok) throw new Error(d.error); window.location.assign("/panel"); } catch(e) { setError(e instanceof Error ? e.message : "No se pudo ingresar"); } finally { setBusy(false); } }
   return <main className="auth-page"><div className="auth-panel"><Link className="brand" href="/"><span className="brand-mark"><MessageSquareText size={21}/></span><span>nexo<span className="brand-dot">sms</span></span></Link><div className="auth-form"><div className="label">BIENVENIDO DE NUEVO</div><h1>Ingresá a tu cuenta.</h1><p>Todo tu SMS en un solo panel.</p><form onSubmit={submit}><label>Correo electrónico<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@empresa.com"/></label><label>Contraseña<input type="password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Tu contraseña"/></label>{error&&<div className="form-error" role="alert">{error}</div>}<button className="btn btn-primary auth-submit" disabled={busy}>{busy?"Ingresando...":"Ingresar"}<ArrowRight size={18}/></button></form><div className="auth-divider"><span>o continuá con</span></div>{google?<a className="google-btn" href="/api/auth/google"><span>G</span> Google</a>:<div className="google-btn disabled"><span>G</span> Google · pendiente de configuración</div>}<p className="auth-switch">¿No tenés cuenta? <Link href="/register">Registrate</Link></p></div><small className="auth-foot">© 2026 NexoSMS · Paraguay</small></div><div className="auth-aside"><div className="auth-pattern">SMS</div><div className="auth-quote">“Cada conversación comienza con un mensaje.”<span>Conectá con tus clientes en todo Paraguay.</span></div></div></main>;
 }

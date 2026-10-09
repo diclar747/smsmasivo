@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/plain-link";
 import ApiTester from "./tester";
 import { ArrowLeft, ArrowUpRight, Code2, MessageSquareText } from "lucide-react";
 
