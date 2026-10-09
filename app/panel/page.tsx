@@ -68,8 +68,8 @@ export default function AppPage(){
  useEffect(()=>{
   if(!user)return;
   const params=new URLSearchParams(location.search);
-  if(params.get("payment")==="success"){setTab("wallet");history.replaceState(null,"","/app")}
-  if(params.get("payment")==="cancelled"){setTab("wallet");history.replaceState(null,"","/app")}
+  if(params.get("payment")==="success"){setTab("wallet");history.replaceState(null,"","/panel")}
+  if(params.get("payment")==="cancelled"){setTab("wallet");history.replaceState(null,"","/panel")}
  },[user?.id]);
  const pendingOrders:number=wallet?.pendingOrders||0;
  useEffect(()=>{

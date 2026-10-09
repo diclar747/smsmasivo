@@ -164,6 +164,9 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
   const path = (await ctx.params).path;
   const route = path.join("/");
   const url = new URL(r.url);
+  // Detrás del proxy (Traefik/Cloudflare) el contenedor ve http://; usar el esquema público.
+  const proto = r.headers.get("x-forwarded-proto")?.split(",")[0].trim();
+  if (proto === "https" || (!proto && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname))) url.protocol = "https:";
   if (method !== "GET" && !r.headers.get("x-api-key")) {
     const origin = r.headers.get("origin");
     if (origin && origin !== url.origin) return err("Origen no permitido", 403);
@@ -185,7 +188,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const salt = random(16), userId = id();
     await db().prepare("INSERT INTO users(id,name,email,password_hash,password_salt,role,status,balance,created_at) VALUES(?,?,?,?,?,'user','active',0,?)")
       .bind(userId, name, email, await passwordHash(password, salt), salt, now()).run();
-    return json({ ok: true }, 201, { "Set-Cookie": await session(userId, r.url) });
+    return json({ ok: true }, 201, { "Set-Cookie": await session(userId, url.href) });
   }
   if (route === "auth/login" && method === "POST") {
     await rateLimit(`login:${clientIp(r)}`, 10, 900);
@@ -193,7 +196,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     const email = String(data.email || "").toLowerCase().trim();
     const user = await first<User>("SELECT * FROM users WHERE email=? AND status='active'", email);
     if (!user?.password_hash || !user.password_salt || await passwordHash(String(data.password || ""), user.password_salt) !== user.password_hash) return err("Credenciales incorrectas", 401);
-    return json({ user: publicUser(user) }, 200, { "Set-Cookie": await session(user.id, r.url) });
+    return json({ user: publicUser(user) }, 200, { "Set-Cookie": await session(user.id, url.href) });
   }
   if (route === "auth/logout" && method === "POST") {
     const cookie = r.headers.get("cookie")?.match(/(?:^|;\s*)sms_session=([^;]+)/)?.[1];
@@ -228,7 +231,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     }
     if (!user || user.status !== "active") return err("Cuenta inactiva", 403);
     if (profile.picture?.startsWith("https://")) await db().prepare("UPDATE users SET avatar_url=? WHERE id=?").bind(profile.picture, user.id).run();
-    return new Response(null, { status: 302, headers: { Location: `${url.origin}/app`, "Set-Cookie": await session(user.id, r.url) } });
+    return new Response(null, { status: 302, headers: { Location: `${url.origin}/panel`, "Set-Cookie": await session(user.id, url.href) } });
   }
 
   if (route === "internal/dispatch" && method === "POST") {
@@ -455,7 +458,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     if (credits < MIN_CREDITS) return err(`La compra mínima es de ${MIN_CREDITS.toLocaleString("es-PY")} SMS`);
     if (price > MAX_PURCHASE) return err(`La compra máxima es de ${Math.floor(MAX_PURCHASE / unit).toLocaleString("es-PY")} SMS`);
     const orderId = id();
-    const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price, currency: "PYG", product_type: "digital", reference: orderId, metadata: { order_id: orderId }, ...(url.protocol === "https:" ? { webhook_url: `${url.origin}/api/webhooks/winsap` } : {}), success_url: `${url.origin}/app?payment=success`, cancel_url: `${url.origin}/app?payment=cancelled` });
+    const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price, currency: "PYG", product_type: "digital", reference: orderId, metadata: { order_id: orderId }, ...(url.protocol === "https:" ? { webhook_url: `${url.origin}/api/webhooks/winsap` } : {}), success_url: `${url.origin}/panel?payment=success`, cancel_url: `${url.origin}/panel?payment=cancelled` });
     const link = payment.data as { id: number; payment_url: string };
     await db().prepare("INSERT INTO orders(id,user_id,credits,price,payment_link_id,payment_url,status,created_at) VALUES(?,?,?,?,?,?,'pending',?)")
       .bind(orderId, user.id, credits, price, String(link.id), link.payment_url, now()).run();
