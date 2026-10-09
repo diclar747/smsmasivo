@@ -28,3 +28,18 @@ El panel procesa campañas vencidas mientras está abierto. Para ejecución desa
 ## Seguridad operativa
 
 Las cookies de sesión son `HttpOnly`, `Secure` y `SameSite=Lax`; las contraseñas se derivan con PBKDF2. No se confirma la entrega final de SMS sólo por la aceptación de la API. Antes de abrir el sitio al público hay que incorporar límites de tasa, monitoreo, política de consentimiento de destinatarios y revisión de capacidad de envío.
+
+## Despliegue en Dokploy (Docker)
+
+La app es un Worker (vinext + base D1) que en el contenedor corre con `wrangler dev --local`; la base SQLite se guarda en `/data`, por eso **hay que montar un volumen persistente ahí** o se pierden los datos en cada deploy. Usar una sola réplica.
+
+1. En Dokploy: **Create Project → Create Service → Application**. Provider **GitHub/Git**, repositorio `https://github.com/diclar747/smsmasivo.git`, rama `main`.
+2. **Build Type: Dockerfile** (ruta `Dockerfile`, contexto `.`).
+3. **Environment**: cargar las variables (ver `.env.example`). Mínimas: `DEMO_ADMIN_PASSWORD`, `DEMO_USER_PASSWORD` (crean las cuentas demo la primera vez), `WINSAP_PAYMENTS_KEY`, `PAYMENTS_LIVE=true`, `WINSAP_SMS_KEY`, `SMS_LIVE`, `PRICE_PER_CREDIT=130`, `CRON_SECRET`. Opcional: `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. `PORT` por defecto es 3000.
+4. **Advanced → Volumes**: agregar un volumen (Volume Mount) con **Mount Path `/data`**.
+5. **Domains**: agregar el dominio, **Container Port 3000**, HTTPS activado (Let's Encrypt). Las cookies de sesión son `Secure`, así que el sitio debe servirse por https.
+6. **Deploy**. Las migraciones de `drizzle/` se aplican solas en cada arranque.
+7. Si se usa Google: registrar `https://TU-DOMINIO/api/auth/google/callback` como redirect URI.
+8. Campañas programadas sin panel abierto: en Dokploy crear una tarea programada (Schedules) cada minuto con `curl -fsS -X POST -H "X-Cron-Secret: $CRON_SECRET" https://TU-DOMINIO/api/internal/dispatch`.
+
+Cambiar contraseñas demo o claves después del primer arranque: las cuentas demo ya creadas no se modifican; cambiá la clave desde el panel de administración.
