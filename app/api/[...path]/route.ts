@@ -100,7 +100,7 @@ async function runCampaign(user: User, campaignId: string, sendNow = false) {
 }
 
 const pricePerCredit = () => Number(config.PRICE_PER_CREDIT) || 130;
-const MIN_PURCHASE = 1000, MAX_PURCHASE = 5_000_000;
+const MIN_CREDITS = 1000, MAX_PURCHASE = 15_000_000; // mínimo 1.000 SMS; tope en guaraníes
 type Order = { id: string; user_id: string; credits: number; price: number; payment_link_id: string; status: string };
 
 /** Consulta a Winsap si el link de la orden fue pagado (monto y link coinciden) y acredita el saldo una sola vez. */
@@ -401,7 +401,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     for (const part of chunk(idList(data.ids), 50)) deleted += (await db().prepare(`DELETE FROM messages WHERE user_id=? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part).run()).meta.changes || 0;
     return json({ deleted });
   }
-  if (route === "wallet" && method === "GET") return json({ balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0, pendingOrders: (await first<{ n: number }>("SELECT COUNT(*) AS n FROM orders WHERE user_id=? AND status='pending'", user.id))?.n || 0, packages: await rows("SELECT * FROM packages WHERE active=1 ORDER BY credits"), pricePerCredit: pricePerCredit(), minPurchase: MIN_PURCHASE, maxPurchase: MAX_PURCHASE });
+  if (route === "wallet" && method === "GET") return json({ balance: (await first<User>("SELECT balance FROM users WHERE id=?", user.id))?.balance || 0, pendingOrders: (await first<{ n: number }>("SELECT COUNT(*) AS n FROM orders WHERE user_id=? AND status='pending'", user.id))?.n || 0, packages: await rows("SELECT * FROM packages WHERE active=1 ORDER BY credits"), pricePerCredit: pricePerCredit(), minCredits: MIN_CREDITS, maxCredits: Math.floor(MAX_PURCHASE / pricePerCredit()) });
   if (route === "wallet/ledger" && method === "GET") {
     const p = url.searchParams, pg = pageOf(p), where = ["l.user_id=?"], args: unknown[] = [user.id];
     dateRange("l.created_at", { from: p.get("from"), to: p.get("to") }, where, args);
@@ -450,12 +450,10 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     await rateLimit(`orders:${user.id}`, 10, 3600);
     const data = await body(r);
     const unit = pricePerCredit();
-    const price = data.amount !== undefined ? Number(data.amount) : Number(data.credits) * unit;
-    if (!Number.isInteger(price) || price < 1) return err("Elegí un monto válido");
-    const credits = Math.floor(price / unit);
-    if (credits < 1) return err("El monto no alcanza para un crédito");
-    if (price < MIN_PURCHASE) return err(`La compra mínima es de Gs. ${MIN_PURCHASE.toLocaleString("es-PY")}`);
-    if (price > MAX_PURCHASE) return err(`La compra máxima es de Gs. ${MAX_PURCHASE.toLocaleString("es-PY")}`);
+    const credits = Number(data.credits), price = credits * unit;
+    if (!Number.isInteger(credits) || credits < 1) return err("Elegí una cantidad de SMS válida");
+    if (credits < MIN_CREDITS) return err(`La compra mínima es de ${MIN_CREDITS.toLocaleString("es-PY")} SMS`);
+    if (price > MAX_PURCHASE) return err(`La compra máxima es de ${Math.floor(MAX_PURCHASE / unit).toLocaleString("es-PY")} SMS`);
     const orderId = id();
     const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price, currency: "PYG", product_type: "digital", reference: orderId, metadata: { order_id: orderId }, ...(url.protocol === "https:" ? { webhook_url: `${url.origin}/api/webhooks/winsap` } : {}), success_url: `${url.origin}/app?payment=success`, cancel_url: `${url.origin}/app?payment=cancelled` });
     const link = payment.data as { id: number; payment_url: string };

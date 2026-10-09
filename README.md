@@ -15,7 +15,7 @@ Las cuentas demo se crean en el primer acceso a `/api/bootstrap` cuando se confi
 
 - `WINSAP_SMS_KEY` se usa en el servidor con `POST https://winsap.com.py/api/rest/sms/send` y `GET /api/rest/sms/balance`.
 - `WINSAP_PAYMENTS_KEY` se usa con `POST /api/v1/payment-links` y `GET /api/v1/payments`. Winsap avisa a `POST /api/webhooks/winsap` (sólo se registra si el sitio corre en https) y el panel también consulta cada pocos segundos. En ambos casos el pago se confirma contra la API de Winsap antes de acreditar. Sólo se acreditan compras confirmadas, con monto y link coincidentes.
-- `PRICE_PER_CREDIT` (por defecto 130 Gs) define el precio de cada SMS. La compra es libre desde Gs. 1.000: se cobra el monto elegido y se acreditan `floor(monto / precio)` créditos. El pago se verifica contra Winsap y se acredita solo.
+- `PRICE_PER_CREDIT` (por defecto 130 Gs) define el precio de cada SMS. La compra es libre desde 1.000 SMS: el usuario elige la cantidad y se cobra `cantidad × precio` (1 SMS = 1 crédito). El pago se verifica contra Winsap y se acredita solo.
 - `SMS_LIVE=false` mantiene los envíos en modo demo. `PAYMENTS_LIVE=false` impide crear pagos reales. Activar sólo después de validar configuración, precios y destinatarios.
 - Google requiere `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Registrar `https://TU-DOMINIO/api/auth/google/callback` como redirect URI autorizado en Google Cloud.
 

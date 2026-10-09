@@ -21,7 +21,7 @@ const endpoints = [
   ["POST", "/api/campaigns/process", "Procesar campañas programadas que ya vencieron."],
   ["GET", "/api/reports", "Historial filtrable: from, to, campaign, status."],
   ["GET", "/api/wallet", "Saldo, movimientos, paquetes y compras."],
-  ["POST", "/api/orders", "Crear link de pago por la cantidad elegida: credits (Gs. 130 por crédito, compra mínima Gs. 1.000)."],
+  ["POST", "/api/orders", "Crear link de pago por la cantidad de SMS elegida: credits (Gs. 130 por SMS, compra mínima 1.000 SMS)."],
   ["POST", "/api/orders/verify-pending", "Verificar pagos pendientes y acreditar los confirmados."],
   ["POST", "/api/orders/:id/verify", "Verificar pago y acreditar créditos si fue confirmado."],
   ["GET", "/api/optouts", "Listar números excluidos. Nunca se les envía SMS."],
