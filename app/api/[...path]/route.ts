@@ -243,6 +243,22 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     return json({ results });
   }
 
+  if (route === "webhooks/winsap" && method === "POST") {
+    // Winsap avisa "payment.paid". El aviso sólo dispara la consulta: el pago se confirma siempre contra la API de Winsap.
+    await rateLimit(`webhook:${clientIp(r)}`, 120, 60);
+    let data: Dict = {};
+    try { data = await r.json() as Dict; } catch { /* cuerpo no JSON */ }
+    const inner = (data.data && typeof data.data === "object" ? data.data : data.payment && typeof data.payment === "object" ? data.payment : {}) as Dict;
+    const meta = (() => { const m = inner.metadata ?? data.metadata; try { return (typeof m === "string" ? JSON.parse(m) : m) as Dict | null; } catch { return null; } })();
+    const refs = [data.reference, inner.reference, meta?.order_id].filter(Boolean).map(String);
+    const linkIds = [data.link_id, inner.link_id].filter(Boolean).map(String);
+    let order: Order | null = null;
+    for (const ref of refs) { order = await first<Order>("SELECT * FROM orders WHERE id=?", ref); if (order) break; }
+    if (!order) for (const link of linkIds) { order = await first<Order>("SELECT * FROM orders WHERE payment_link_id=?", link); if (order) break; }
+    if (order && order.status === "pending") { try { await verifyOrder(order); } catch (e) { console.error("webhook verify", e); } }
+    return json({ ok: true });
+  }
+
   const user = await requireUser(r);
   if (route === "me" && method === "GET") return json({ user: publicUser(user) });
   if (route === "me" && method === "PUT") {
@@ -441,7 +457,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     if (price < MIN_PURCHASE) return err(`La compra mínima es de Gs. ${MIN_PURCHASE.toLocaleString("es-PY")}`);
     if (price > MAX_PURCHASE) return err(`La compra máxima es de Gs. ${MAX_PURCHASE.toLocaleString("es-PY")}`);
     const orderId = id();
-    const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price, currency: "PYG", product_type: "digital", reference: orderId, success_url: `${url.origin}/app?payment=success`, cancel_url: `${url.origin}/app?payment=cancelled` });
+    const payment = await winsap("/api/v1/payment-links", String(config.WINSAP_PAYMENTS_KEY), "POST", { name: `${credits} créditos SMS`, description: `Recarga SMS #${orderId}`, price, currency: "PYG", product_type: "digital", reference: orderId, metadata: { order_id: orderId }, ...(url.protocol === "https:" ? { webhook_url: `${url.origin}/api/webhooks/winsap` } : {}), success_url: `${url.origin}/app?payment=success`, cancel_url: `${url.origin}/app?payment=cancelled` });
     const link = payment.data as { id: number; payment_url: string };
     await db().prepare("INSERT INTO orders(id,user_id,credits,price,payment_link_id,payment_url,status,created_at) VALUES(?,?,?,?,?,?,'pending',?)")
       .bind(orderId, user.id, credits, price, String(link.id), link.payment_url, now()).run();
