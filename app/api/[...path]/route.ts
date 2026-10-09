@@ -64,7 +64,7 @@ async function runCampaign(user: User, campaignId: string, sendNow = false) {
   else if (campaign.status === "paused") throw new HttpError("La campaña está pausada. Reanudala para continuar.");
   else if (campaign.scheduled_at && campaign.scheduled_at > now()) throw new HttpError("La campaña aún no llegó a su horario");
   await db().prepare("UPDATE campaigns SET status='sending' WHERE id=? AND status NOT IN ('cancelled','completed')").bind(campaignId).run();
-  const pending = await rows<{ id: string; phone: string; name: string; variables: string }>("SELECT * FROM recipients WHERE campaign_id=? AND status='pending' ORDER BY rowid LIMIT 20", campaignId);
+  const pending = await rows<{ id: string; phone: string; name: string; variables: string }>("SELECT * FROM recipients WHERE campaign_id=? AND status='pending' ORDER BY seq LIMIT 20", campaignId);
   for (const rec of pending) {
     const live = await first<{ status: string }>("SELECT status FROM campaigns WHERE id=?", campaignId);
     if (live?.status !== "sending") break; // pausada o cancelada mientras se procesaba
@@ -118,7 +118,7 @@ async function verifyOrder(order: Order): Promise<"paid" | "pending"> {
   await db().batch([
     db().prepare("UPDATE users SET balance=balance+? WHERE id=? AND EXISTS(SELECT 1 FROM orders WHERE id=? AND status='pending')").bind(order.credits, order.user_id, order.id),
     db().prepare("UPDATE orders SET status='paid' WHERE id=? AND status='pending'").bind(order.id),
-    db().prepare("INSERT OR IGNORE INTO ledger(id,user_id,delta,reason,created_at) VALUES(?,?,?,?,?)").bind(order.id, order.user_id, order.credits, `Compra ${order.id}`, now()),
+    db().prepare("INSERT INTO ledger(id,user_id,delta,reason,created_at) VALUES(?,?,?,?,?) ON CONFLICT DO NOTHING").bind(order.id, order.user_id, order.credits, `Compra ${order.id}`, now()),
   ]);
   return "paid";
 }
@@ -147,7 +147,7 @@ function messageFilter(userId: string, p: URLSearchParams) {
   if (q) {
     const like = likeOf(q), digits = q.replace(/\D/g, "");
     const phone = digits.length >= 3 ? `%${digits.startsWith("0") ? digits.slice(1) : digits}%` : null;
-    where.push(`(m.body LIKE ? OR m.error LIKE ? OR m.provider_id LIKE ? OR c.name LIKE ?${phone ? " OR m.phone LIKE ?" : ""})`);
+    where.push(`(m.body ILIKE ? OR m.error ILIKE ? OR m.provider_id ILIKE ? OR c.name ILIKE ?${phone ? " OR m.phone ILIKE ?" : ""})`);
     args.push(like, like, like, like, ...(phone ? [phone] : []));
   }
   return { where: where.join(" AND "), args, from: "FROM messages m LEFT JOIN campaigns c ON c.id=m.campaign_id" };
@@ -329,7 +329,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
   if (path[0] === "campaigns" && path[1] && path.length === 2 && method === "GET") {
     const campaign = await first("SELECT * FROM campaigns WHERE id=? AND user_id=?", path[1], user.id);
     if (!campaign) return err("Campaña no encontrada", 404);
-    return json({ campaign, recipients: await rows("SELECT * FROM recipients WHERE campaign_id=? ORDER BY rowid LIMIT 2000", path[1]) });
+    return json({ campaign, recipients: await rows("SELECT * FROM recipients WHERE campaign_id=? ORDER BY seq LIMIT 2000", path[1]) });
   }
   if (path[0] === "campaigns" && path[1] && path.length === 2 && method === "PUT") {
     const data = await body(r);
@@ -407,11 +407,11 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     dateRange("l.created_at", { from: p.get("from"), to: p.get("to") }, where, args);
     if (p.get("type") === "in") where.push("l.delta>0"); else if (p.get("type") === "out") where.push("l.delta<0");
     const q = (p.get("q") || "").trim().slice(0, 100);
-    if (q) { where.push("(l.reason LIKE ? OR c.name LIKE ?)"); args.push(likeOf(q), likeOf(q)); }
+    if (q) { where.push("(l.reason ILIKE ? OR c.name ILIKE ?)"); args.push(likeOf(q), likeOf(q)); }
     const from = "FROM ledger l LEFT JOIN campaigns c ON l.reason LIKE 'Campaña %' AND c.id=substr(l.reason,9)", w = where.join(" AND ");
-    const grouped = `SELECT MIN(l.id) AS id, MAX(l.created_at) AS created_at, SUM(l.delta) AS delta, COUNT(*) AS n, l.reason AS reason, MAX(c.name) AS campaign_name ${from} WHERE ${w} GROUP BY CASE WHEN l.reason LIKE 'Campaña %' THEN l.reason || substr(l.created_at,1,13) ELSE l.id END`;
-    const total = (await first<{ n: number }>(`SELECT COUNT(*) AS n FROM (${grouped})`, ...args))?.n || 0;
-    const entries = await rows(`SELECT * FROM (${grouped}) ORDER BY created_at DESC LIMIT ? OFFSET ?`, ...args, pg.size, pg.offset);
+    const grouped = `SELECT MIN(l.id) AS id, MAX(l.created_at) AS created_at, SUM(l.delta) AS delta, COUNT(*) AS n, MAX(l.reason) AS reason, MAX(c.name) AS campaign_name ${from} WHERE ${w} GROUP BY CASE WHEN l.reason LIKE 'Campaña %' THEN l.reason || substr(l.created_at,1,13) ELSE l.id END`;
+    const total = (await first<{ n: number }>(`SELECT COUNT(*) AS n FROM (${grouped}) g`, ...args))?.n || 0;
+    const entries = await rows(`SELECT * FROM (${grouped}) g ORDER BY created_at DESC LIMIT ? OFFSET ?`, ...args, pg.size, pg.offset);
     const sum = await first<{ credited: number; spent: number }>(`SELECT COALESCE(SUM(CASE WHEN l.delta>0 THEN l.delta END),0) AS credited, COALESCE(SUM(CASE WHEN l.delta<0 THEN -l.delta END),0) AS spent ${from} WHERE ${w}`, ...args);
     return json({ entries, total, page: pg.page, pageSize: pg.size, summary: sum });
   }
@@ -424,7 +424,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     dateRange("created_at", { from: p.get("from"), to: p.get("to") }, where, args);
     if (p.get("status")) { where.push("status=?"); args.push(p.get("status")); }
     const q = (p.get("q") || "").trim().slice(0, 100);
-    if (q) { where.push("(id LIKE ? OR CAST(credits AS TEXT) LIKE ? OR CAST(price AS TEXT) LIKE ?)"); args.push(likeOf(q), likeOf(q), likeOf(q.replace(/\D/g, "") || q)); }
+    if (q) { where.push("(id ILIKE ? OR CAST(credits AS TEXT) ILIKE ? OR CAST(price AS TEXT) ILIKE ?)"); args.push(likeOf(q), likeOf(q), likeOf(q.replace(/\D/g, "") || q)); }
     const w = where.join(" AND ");
     const total = (await first<{ n: number }>(`SELECT COUNT(*) AS n FROM orders WHERE ${w}`, ...args))?.n || 0;
     const orders = await rows(`SELECT * FROM orders WHERE ${w} ORDER BY created_at DESC LIMIT ? OFFSET ?`, ...args, pg.size, pg.offset);
@@ -479,7 +479,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     let added = 0;
     for (const raw of list) {
       const phone = normalizePhone(raw); if (!phone) continue;
-      const res = await db().prepare("INSERT OR IGNORE INTO optouts(id,user_id,phone,created_at) VALUES(?,?,?,?)").bind(id(), user.id, phone, now()).run();
+      const res = await db().prepare("INSERT INTO optouts(id,user_id,phone,created_at) VALUES(?,?,?,?) ON CONFLICT DO NOTHING").bind(id(), user.id, phone, now()).run();
       added += res.meta.changes || 0;
     }
     return json({ added }, 201);
@@ -500,7 +500,7 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
   if (route === "admin/users" && method === "GET") {
     requireAdmin(user);
     const query = `%${String(url.searchParams.get("q") || "").slice(0, 100)}%`;
-    return json({ users: await rows("SELECT id,name,email,role,status,balance,created_at FROM users WHERE name LIKE ? OR email LIKE ? ORDER BY created_at DESC LIMIT 500", query, query) });
+    return json({ users: await rows("SELECT id,name,email,role,status,balance,created_at FROM users WHERE name ILIKE ? OR email ILIKE ? ORDER BY created_at DESC LIMIT 500", query, query) });
   }
   if (route === "admin/users" && method === "POST") {
     requireAdmin(user); const data = await body(r);

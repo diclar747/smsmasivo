@@ -6,7 +6,7 @@ Plataforma de SMS para Paraguay con landing, cuentas, contactos, campañas, repo
 
 1. Instalar dependencias con `npm ci`.
 2. Configurar secretos en el entorno local o en `.dev.vars` (ignorado por Git). Usar `.env.example` como referencia. Nunca poner claves en el código cliente.
-3. Generar migraciones con `npm run db:generate`. El despliegue de Sites aplica las migraciones al D1 configurado.
+3. Generar migraciones con `npm run db:generate`. Las migraciones SQL viven en `drizzle/` y se aplican con `node deploy/migrate.mjs` (requiere `DATABASE_URL`).
 4. Ejecutar `npm run dev`. El enlace local se imprime en la consola.
 
 Las cuentas demo se crean en el primer acceso a `/api/bootstrap` cuando se configuran `DEMO_ADMIN_PASSWORD` y `DEMO_USER_PASSWORD`. Correos: `admin@demo.sms.py` y `usuario@demo.sms.py`. La cuenta admin recibe 500 créditos demo y la de usuario 80. Los números de contacto de muestra son ficticios y no deben usarse para pruebas reales.
@@ -29,17 +29,12 @@ El panel procesa campañas vencidas mientras está abierto. Para ejecución desa
 
 Las cookies de sesión son `HttpOnly`, `Secure` y `SameSite=Lax`; las contraseñas se derivan con PBKDF2. No se confirma la entrega final de SMS sólo por la aceptación de la API. Antes de abrir el sitio al público hay que incorporar límites de tasa, monitoreo, política de consentimiento de destinatarios y revisión de capacidad de envío.
 
-## Despliegue en Dokploy (Docker)
+## Despliegue en Dokploy (Docker + PostgreSQL)
 
-La app es un Worker (vinext + base D1) que en el contenedor corre con `wrangler dev --local`; la base SQLite se guarda en `/data`, por eso **hay que montar un volumen persistente ahí** o se pierden los datos en cada deploy. Usar una sola réplica.
+La app es un Worker (vinext) que en el contenedor corre con `wrangler dev --local` y guarda los datos en **PostgreSQL** (`DATABASE_URL`). Las migraciones de `drizzle/*.sql` se aplican solas al arrancar (`deploy/migrate.mjs`).
 
-1. En Dokploy: **Create Project → Create Service → Application**. Provider **GitHub/Git**, repositorio `https://github.com/diclar747/smsmasivo.git`, rama `main`.
-2. **Build Type: Dockerfile** (ruta `Dockerfile`, contexto `.`).
-3. **Environment**: cargar las variables (ver `.env.example`). Mínimas: `DEMO_ADMIN_PASSWORD`, `DEMO_USER_PASSWORD` (crean las cuentas demo la primera vez), `WINSAP_PAYMENTS_KEY`, `PAYMENTS_LIVE=true`, `WINSAP_SMS_KEY`, `SMS_LIVE`, `PRICE_PER_CREDIT=130`, `CRON_SECRET`. Opcional: `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. `PORT` por defecto es 3000.
-4. **Advanced → Volumes**: agregar un volumen (Volume Mount) con **Mount Path `/data`**.
-5. **Domains**: agregar el dominio, **Container Port 3000**, HTTPS activado (Let's Encrypt). Las cookies de sesión son `Secure`, así que el sitio debe servirse por https.
-6. **Deploy**. Las migraciones de `drizzle/` se aplican solas en cada arranque.
-7. Si se usa Google: registrar `https://TU-DOMINIO/api/auth/google/callback` como redirect URI.
-8. Campañas programadas sin panel abierto: en Dokploy crear una tarea programada (Schedules) cada minuto con `curl -fsS -X POST -H "X-Cron-Secret: $CRON_SECRET" https://TU-DOMINIO/api/internal/dispatch`.
-
-Cambiar contraseñas demo o claves después del primer arranque: las cuentas demo ya creadas no se modifican; cambiá la clave desde el panel de administración.
+1. En Dokploy crear una base **PostgreSQL** y copiar su *Internal Connection URL* (`postgresql://usuario:clave@host-interno:5432/base`).
+2. Crear la **Application**: provider Git, repositorio `https://github.com/diclar747/smsmasivo.git`, rama `main`, **Build Type: Dockerfile**.
+3. **Environment**: `DATABASE_URL` (obligatoria), `DEMO_ADMIN_PASSWORD`, `DEMO_USER_PASSWORD`, `WINSAP_PAYMENTS_KEY`, `PAYMENTS_LIVE=true`, `WINSAP_SMS_KEY`, `SMS_LIVE`, `PRICE_PER_CREDIT=130`, `CRON_SECRET`. Opcional: `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. `PORT` por defecto es 3000.
+4. **Domains**: agregar el dominio, **Container Port 3000**, HTTPS activado. Las cookies de sesión son `Secure`.
+5. No hace falta volumen: los datos viven en Postgres (hacer backups de esa base).

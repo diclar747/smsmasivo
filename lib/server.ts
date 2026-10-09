@@ -1,10 +1,42 @@
 import { env } from "cloudflare:workers";
+import { Client, types } from "pg";
 
-export const config = env as unknown as Record<string, string | D1Database | undefined>;
-export const db = () => {
-  if (!config.DB) throw new Error("Base de datos no disponible");
-  return config.DB as D1Database;
-};
+export const config = env as unknown as Record<string, string | undefined>;
+
+// bigint (COUNT/SUM) y numeric llegan como string; la app los usa como número.
+types.setTypeParser(20, v => Number(v));
+types.setTypeParser(1700, v => Number(v));
+
+/** Capa mínima compatible con la API de D1 (prepare/bind/first/all/run/batch) sobre PostgreSQL. */
+const toPg = (sql: string) => { let n = 0; return sql.replace(/\?/g, () => `$${++n}`); };
+async function withClient<T>(fn: (c: Client) => Promise<T>): Promise<T> {
+  if (!config.DATABASE_URL) throw new Error("Base de datos no disponible");
+  const client = new Client({ connectionString: config.DATABASE_URL, connectionTimeoutMillis: 10000 });
+  await client.connect();
+  try { return await fn(client); } finally { await client.end().catch(() => {}); }
+}
+class Statement {
+  args: unknown[] = [];
+  constructor(readonly sql: string) {}
+  bind(...args: unknown[]) { this.args = args; return this; }
+  exec(c: Client) { return c.query(toPg(this.sql), this.args as unknown[]); }
+  async all<T = Record<string, unknown>>() { const r = await withClient(c => this.exec(c)); return { results: r.rows as T[], meta: { changes: r.rowCount ?? 0 } }; }
+  async first<T = Record<string, unknown>>() { const r = await withClient(c => this.exec(c)); return (r.rows[0] ?? null) as T | null; }
+  async run() { const r = await withClient(c => this.exec(c)); return { meta: { changes: r.rowCount ?? 0 } }; }
+}
+export const db = () => ({
+  prepare: (sql: string) => new Statement(sql),
+  /** Ejecuta las sentencias en una sola transacción. */
+  batch: (statements: Statement[]) => withClient(async c => {
+    await c.query("BEGIN");
+    try {
+      const out = [];
+      for (const st of statements) { const r = await st.exec(c); out.push({ results: r.rows, meta: { changes: r.rowCount ?? 0 } }); }
+      await c.query("COMMIT");
+      return out;
+    } catch (e) { await c.query("ROLLBACK").catch(() => {}); throw e; }
+  }),
+});
 export const now = () => new Date().toISOString();
 export const id = () => crypto.randomUUID();
 export const json = (value: unknown, status = 200, headers?: HeadersInit) => Response.json(value, { status, headers });
@@ -47,7 +79,7 @@ export class RateLimitError extends Error { constructor(public retryAfter: numbe
 export async function rateLimit(key: string, limit: number, windowSeconds: number) {
   const nowSec = Math.floor(Date.now() / 1000);
   const start = nowSec - (nowSec % windowSeconds);
-  const row = await db().prepare("INSERT INTO rate_limits(key,window_start,count) VALUES(?,?,1) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN window_start=excluded.window_start THEN count+1 ELSE 1 END, window_start=excluded.window_start RETURNING count")
+  const row = await db().prepare("INSERT INTO rate_limits(key,window_start,count) VALUES(?,?,1) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN rate_limits.window_start=excluded.window_start THEN rate_limits.count+1 ELSE 1 END, window_start=excluded.window_start RETURNING rate_limits.count")
     .bind(key, start).first<{ count: number }>();
   if ((row?.count ?? 1) > limit) throw new RateLimitError(start + windowSeconds - nowSec);
 }
