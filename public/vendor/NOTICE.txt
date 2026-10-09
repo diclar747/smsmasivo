@@ -1,0 +1,7 @@
+SheetJS Community Edition xlsx.js v0.20.1
+Copyright (C) 2013-present SheetJS
+https://sheetjs.com/
+
+This browser bundle was reused from the local Winsap project for Excel and CSV import.
+SheetJS Community Edition is distributed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
