@@ -38,6 +38,7 @@ export default function ApiTester() {
   const action = ACTIONS.find(a => a.id === id)!;
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [out, setOut] = useState<{ status: number; ms: number; text: string } | null>(null);
 
   const val = (f: Field) => values[`${id}.${f.name}`] ?? f.def ?? "";
@@ -68,8 +69,9 @@ export default function ApiTester() {
 
   const curl = `curl ${action.method === "GET" ? "" : `-X ${action.method} `}"${typeof location === "undefined" ? "https://TU-DOMINIO" : location.origin}${built.url}" \\\n  -H "X-API-Key: ${key.trim() ? key.trim().slice(0, 8) + "…" : "sms_TU_CLAVE"}"${built.body ? ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(built.body)}'` : ""}`;
 
+  function start() { if (action.danger) setConfirming(true); else void run(); }
   async function run() {
-    if (action.danger && !window.confirm(`${action.danger}\n\n¿Continuar?`)) return;
+    setConfirming(false);
     setBusy(true); setOut(null);
     const t0 = performance.now();
     try {
@@ -108,10 +110,15 @@ export default function ApiTester() {
     </label>)}
     {built.error && <p className="tester-err">{built.error}</p>}
     <div className="tester-actions">
-      <button className="tester-run" disabled={blocked || busy} onClick={run}>{busy ? "Probando…" : "Probar ahora"}</button>
+      <button className="tester-run" disabled={blocked || busy} onClick={start}>{busy ? "Probando…" : "Probar ahora"}</button>
       {!key.trim() && <small>Pegá tu API Key para habilitar la prueba.</small>}
     </div>
     <details className="tester-curl"><summary>Ver como cURL</summary><pre>{curl}</pre></details>
     {out && <div className="tester-out"><div className={`tester-status ${out.status >= 200 && out.status < 300 ? "ok" : "ko"}`}>{out.status || "ERROR"} · {out.ms} ms</div><pre>{out.text}</pre></div>}
+    {confirming && <div className="modal-backdrop" onClick={() => setConfirming(false)} onKeyDown={e => { if (e.key === "Escape") setConfirming(false); }}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
+        <h3>{action.id === "campaign-cancel" ? "Cancelar campaña" : "Confirmar envío real"}</h3><p>{action.danger}</p>
+        <div className="modal-actions"><button className="secondary-btn" onClick={() => setConfirming(false)}>Cancelar</button><button className="action-btn danger-btn" autoFocus onClick={() => void run()}>{action.id === "campaign-cancel" ? "Sí, cancelar" : "Sí, enviar"}</button></div>
+      </div></div>}
   </div>;
 }
