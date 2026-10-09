@@ -370,6 +370,29 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
     for (const part of chunk(idList(data.ids), 50)) deleted += (await db().prepare(`DELETE FROM contacts WHERE user_id=? AND id IN (${part.map(() => "?").join(",")})`).bind(user.id, ...part).run()).meta.changes || 0;
     return json({ deleted });
   }
+  if (path[0] === "contacts" && path[1] && path.length === 2 && method === "PUT") {
+    const data = await body(r);
+    const current = await first<{ id: string; phone: string; name: string }>("SELECT id,phone,name FROM contacts WHERE id=? AND user_id=?", path[1], user.id);
+    if (!current) return err("Contacto no encontrado", 404);
+    const name = data.name === undefined ? current.name : String(data.name || "").trim().slice(0, 100);
+    let phone = current.phone;
+    if (data.phone !== undefined) {
+      const normalized = normalizePhone(data.phone);
+      if (!normalized) return err("Número paraguayo inválido");
+      if (normalized !== current.phone && await first("SELECT id FROM contacts WHERE user_id=? AND phone=? AND id<>?", user.id, normalized, current.id)) return err("Ya tenés un contacto con ese número", 409);
+      phone = normalized;
+    }
+    await db().prepare("UPDATE contacts SET name=?, phone=? WHERE id=? AND user_id=?").bind(name, phone, current.id, user.id).run();
+    if (Array.isArray(data.groupIds)) {
+      const wanted = [...new Set(idList(data.groupIds))];
+      const valid = wanted.length ? (await rows<{ id: string }>(`SELECT id FROM contact_groups WHERE user_id=? AND id IN (${wanted.map(() => "?").join(",")})`, user.id, ...wanted)).map(g => g.id) : [];
+      await db().batch([
+        db().prepare(`DELETE FROM contact_group_members WHERE contact_id=?${valid.length ? ` AND group_id NOT IN (${valid.map(() => "?").join(",")})` : ""}`).bind(current.id, ...valid),
+        ...valid.map(g => db().prepare("INSERT INTO contact_group_members(group_id,contact_id) VALUES(?,?) ON CONFLICT DO NOTHING").bind(g, current.id)),
+      ]);
+    }
+    return json({ ok: true, name, phone });
+  }
   if (path[0] === "contacts" && path[1] && method === "DELETE") {
     await db().prepare("DELETE FROM contacts WHERE id=? AND user_id=?").bind(path[1], user.id).run(); return json({ ok: true });
   }

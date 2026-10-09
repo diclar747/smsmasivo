@@ -12,6 +12,7 @@ const endpoints = [
   ["GET", "/api/dashboard", "Métricas y actividad reciente."],
   ["GET", "/api/contacts", "Listar contactos."],
   ["POST", "/api/contacts", "Importar hasta 2000 contactos: contacts: [{phone,name,variables}]. Con groupId los agrega a ese grupo, también los que ya existían."],
+  ["PUT", "/api/contacts/:id", "Editar un contacto: name, phone y groupIds (reemplaza los grupos del contacto)."],
   ["DELETE", "/api/contacts/:id", "Eliminar un contacto."],
   ["GET", "/api/groups", "Listar grupos de contactos con la cantidad de miembros."],
   ["POST", "/api/groups", "Crear un grupo: name (único por cuenta, hasta 60 caracteres)."],

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownToLine, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CreditCard, ExternalLink, Search, ShieldCheck, Trash2, X } from "lucide-react";
-import { GroupsBar, createGroupDialog } from "./groups";
+import { ArrowDownToLine, Pencil, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, CreditCard, ExternalLink, Search, ShieldCheck, Trash2, X } from "lucide-react";
+import { EditContactModal, GroupsBar, createGroupDialog } from "./groups";
 import { type Ask, type Contact, type Group, Empty, Status, date, fmt, request } from "./shared";
 
 const SIZES = [15, 30, 50, 100];
@@ -198,6 +198,7 @@ export function OrdersPanel({ ask, flash, reloadKey, onChanged }: { ask: Ask; fl
 /* ------------------------------------------------------------------ Contactos */
 export function ContactsList({ contacts, groups, ask, flash, onChanged }: { contacts: Contact[]; groups: Group[]; ask: Ask; flash: (s: string) => void; onChanged: () => void }) {
   const [active, setActive] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Contact | null>(null);
   const activeGroup = groups.find(g => g.id === active) || null;
   const base = useMemo(() => activeGroup ? contacts.filter(c => c.group_ids?.includes(activeGroup.id)) : contacts, [contacts, activeGroup]);
   const gname = useMemo(() => new Map(groups.map(g => [g.id, g.name])), [groups]);
@@ -229,9 +230,10 @@ export function ContactsList({ contacts, groups, ask, flash, onChanged }: { cont
     <div className="dt-filters"><SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, número o dato…" />{q && <button className="dx-link" onClick={() => setQ("")}>Limpiar</button>}</div>
     <div className="dt-wrap">
       {rows.length ? <table className="dt-table"><thead><tr><th className="chk"><input type="checkbox" checked={allOn} onChange={() => setSel(allOn ? new Set() : new Set(rows.map(r => r.id)))} aria-label="Seleccionar todos" /></th><th>Nombre</th><th>Número</th><th>Variables</th><th>Agregado</th><th /></tr></thead>
-        <tbody>{rows.map(c => { let vars: string[] = []; try { vars = Object.keys(JSON.parse(c.variables || "{}")); } catch { /* sin variables */ } return <tr key={c.id} className={sel.has(c.id) ? "sel" : ""}><td className="chk"><input type="checkbox" checked={sel.has(c.id)} onChange={() => toggle(c.id)} aria-label="Seleccionar" /></td><td><b>{c.name || "Sin nombre"}</b>{!!c.group_ids?.length && <div className="grp-tags">{c.group_ids.map(g => gname.get(g) && <span key={g}>{gname.get(g)}</span>)}</div>}</td><td className="nowrap">+{c.phone}</td><td>{vars.join(", ") || "—"}</td><td className="nowrap">{date(c.created_at)}</td><td className="act"><button title="Eliminar" onClick={() => del({ ids: [c.id] }, "Eliminar contacto", `Se elimina a ${c.name || "+" + c.phone}.`, "Eliminar")}><Trash2 size={15} /></button></td></tr>; })}</tbody></table>
+        <tbody>{rows.map(c => { let vars: string[] = []; try { vars = Object.keys(JSON.parse(c.variables || "{}")); } catch { /* sin variables */ } return <tr key={c.id} className={sel.has(c.id) ? "sel" : ""}><td className="chk"><input type="checkbox" checked={sel.has(c.id)} onChange={() => toggle(c.id)} aria-label="Seleccionar" /></td><td><b>{c.name || "Sin nombre"}</b>{!!c.group_ids?.length && <div className="grp-tags">{c.group_ids.map(g => gname.get(g) && <span key={g}>{gname.get(g)}</span>)}</div>}</td><td className="nowrap">+{c.phone}</td><td>{vars.join(", ") || "—"}</td><td className="nowrap">{date(c.created_at)}</td><td className="act"><button title="Editar contacto" aria-label="Editar contacto" onClick={() => setEditing(c)}><Pencil size={15} /></button><button title="Eliminar" onClick={() => del({ ids: [c.id] }, "Eliminar contacto", `Se elimina a ${c.name || "+" + c.phone}.`, "Eliminar")}><Trash2 size={15} /></button></td></tr>; })}</tbody></table>
         : <Empty title={base.length ? "Sin resultados" : activeGroup ? "Este grupo está vacío" : contacts.length ? "Sin resultados" : "Tu base está vacía"} subtitle={base.length ? "Probá con otra búsqueda." : activeGroup ? "Marcá contactos en Todos y agregalos a este grupo, o importá una lista directo al grupo." : contacts.length ? "Probá con otra búsqueda." : "Importá un archivo o pegá números arriba."} />}
     </div>
     <Pager page={cur} size={size} total={list.length} onPage={setPage} onSize={setSize} />
+  {editing && <EditContactModal contact={editing} groups={groups} ask={ask} flash={flash} onClose={() => setEditing(null)} onSaved={onChanged} />}
   </section>;
 }

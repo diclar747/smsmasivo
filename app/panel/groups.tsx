@@ -1,6 +1,7 @@
 "use client";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import { type Ask, type Group, request } from "./shared";
+import { type Ask, type Contact, type Group, request } from "./shared";
 
 const errMsg = (e: unknown) => e instanceof Error ? e.message : "Ocurrió un error";
 
@@ -31,5 +32,38 @@ export function GroupsBar({ groups, active, onActive, total, ask, flash, onChang
     {groups.map(g => <button key={g.id} className={`grp-chip${active === g.id ? " on" : ""}`} onClick={() => onActive(g.id)}>{g.name} <b>{g.count}</b></button>)}
     <button className="grp-new" onClick={create}><Plus size={14} /> Nuevo grupo</button>
     {current && <span className="grp-actions"><button onClick={() => rename(current)}><Pencil size={14} /> Renombrar</button><button className="danger" onClick={() => remove(current)}><Trash2 size={14} /> Eliminar grupo</button></span>}
+  </div>;
+}
+
+/** Edición de un contacto: nombre, número y grupos (con opción de crear un grupo nuevo desde acá). */
+export function EditContactModal({ contact, groups, ask, flash, onClose, onSaved }: {
+  contact: Contact; groups: Group[]; ask: Ask; flash: (s: string) => void; onClose: () => void; onSaved: () => void;
+}) {
+  const [name, setName] = useState(contact.name);
+  const [phone, setPhone] = useState(contact.phone.replace(/^595/, "0"));
+  const [sel, setSel] = useState<Set<string>>(new Set(contact.group_ids || []));
+  const [created, setCreated] = useState<Group[]>([]);
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const all = [...groups, ...created.filter(c => !groups.some(g => g.id === c.id))];
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
+  const toggle = (id: string) => setSel(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  async function newGroup() { const g = await createGroupDialog(ask, flash); if (g) { setCreated(c => [...c, g]); setSel(prev => new Set(prev).add(g.id)); } }
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setError("");
+    try { await request(`contacts/${contact.id}`, "PUT", { name, phone, groupIds: [...sel] }); flash("Contacto actualizado"); onSaved(); onClose(); }
+    catch (err) { setError(errMsg(err)); } finally { setBusy(false); }
+  }
+  return <div className="modal-backdrop" onClick={onClose}>
+    <form className="modal edit-contact" role="dialog" aria-modal="true" aria-label="Editar contacto" onClick={e => e.stopPropagation()} onSubmit={save}>
+      <h3>Editar contacto</h3>
+      <label>Nombre<input autoFocus value={name} onChange={e => setName(e.target.value)} maxLength={100} placeholder="Nombre del contacto" /></label>
+      <label>Número de celular<input value={phone} onChange={e => setPhone(e.target.value)} placeholder="0981 234 567" inputMode="tel" /></label>
+      <div className="edit-groups"><div className="edit-groups-head"><span>Grupos</span><button type="button" onClick={newGroup}><Plus size={13} /> Nuevo grupo</button></div>
+        {all.length ? <ul>{all.map(g => <li key={g.id}><label><input type="checkbox" checked={sel.has(g.id)} onChange={() => toggle(g.id)} /><span>{g.name}</span></label></li>)}</ul>
+          : <p className="edit-empty">Todavía no tenés grupos. Creá uno con Nuevo grupo.</p>}
+      </div>
+      {error && <div className="form-error" role="alert">{error}</div>}
+      <div className="modal-actions"><button type="button" className="secondary-btn" onClick={onClose}>Cancelar</button><button className="action-btn" disabled={busy || !phone.trim()}>{busy ? "Guardando..." : "Guardar cambios"}</button></div>
+    </form>
   </div>;
 }
