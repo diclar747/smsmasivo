@@ -38,3 +38,12 @@ La app es un Worker (vinext) que en el contenedor corre con `wrangler dev --loca
 3. **Environment**: `DATABASE_URL` (obligatoria), `DEMO_ADMIN_PASSWORD`, `DEMO_USER_PASSWORD`, `WINSAP_PAYMENTS_KEY`, `PAYMENTS_LIVE=true`, `WINSAP_SMS_KEY`, `SMS_LIVE`, `PRICE_PER_CREDIT=130`, `CRON_SECRET`. Opcional: `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. `PORT` por defecto es 3000.
 4. **Domains**: agregar el dominio, **Container Port 3000**, HTTPS activado. Las cookies de sesión son `Secure`.
 5. No hace falta volumen: los datos viven en Postgres (hacer backups de esa base).
+
+## Despliegue automático
+
+Cada push a `main` se despliega solo en el servidor: un revisor (cron, cada 2 minutos) compara `main` con la versión en producción, construye la imagen `nexosms:<commit>` y actualiza el servicio. Si la versión nueva no responde, vuelve sola a la anterior. Un vigilante aparte reinicia o reconstruye el servicio si el sitio cae.
+
+Comandos en el servidor:
+
+- Desplegar ahora: `deploy-nexosms` (o `/usr/local/bin/nexosms-deploy.sh [rama]`).
+- Ver el estado: `tail -f /var/log/nexosms-autodeploy.log /var/log/nexosms-watchdog.log`.
