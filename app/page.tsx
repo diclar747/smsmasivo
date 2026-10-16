@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "@/components/plain-link";
-import { BarChart3, CalendarClock, Check, Code2, MessageCircle, Send, Users } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarClock, Check, Code2, MessageCircle, RadioTower, Send, Users, Zap } from "lucide-react";
 import Composer from "@/components/composer";
+import { DashMock, OperatorCard, ParaguayMap, PhoneMock, WaCard } from "@/components/hero-art";
+import { WhatsAppIcon } from "@/components/icons";
 import LandingSeo from "@/components/landing-seo";
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { getPrice } from "@/lib/price";
@@ -30,22 +32,45 @@ export default async function Home() {
   const price = await getPrice();
   const pages = seoPages(price);
   const gs = price.toLocaleString("es-PY").replace(/,/g, ".");
-  return <div className="site">
-    <SiteNav />
+  return <div className="site site-landing">
+    <SiteNav active="inicio" />
     <main>
-      <div className="container hero">
-        <div>
-          <h1>SMS masivo en Paraguay, claro y sin sorpresas</h1>
-          <p className="lead">Enviá campañas a clientes de Tigo, Claro, Personal y Vox desde el navegador o con una API. Cada mensaje de hasta 160 caracteres cuesta 1 crédito, y lo ves antes de enviar.</p>
-          <div className="hero-cta"><Link className="btn btn-primary btn-lg" href="/register">Crear cuenta gratis</Link><Link className="btn btn-ghost btn-lg" href="/docs">Ver la API</Link></div>
-          <p className="hero-note">Prepago, sin mensualidad ni contrato.</p>
+      <section className="container lh">
+        <div className="lh-copy">
+          <span className="lh-pill"><Zap size={15} aria-hidden />Plataforma de SMS masivos</span>
+          <h1>Llegá a miles de clientes con <span className="grad">SMS Premium</span></h1>
+          <p className="lead">Enviá campañas masivas a todas las operadoras del Paraguay. Incluí tu enlace de WhatsApp y convertí mensajes en oportunidades.</p>
+          <div className="lh-cta">
+            <Link className="btn btn-primary btn-lg" href="/register"><Send size={18} aria-hidden />Enviar SMS ahora<ArrowRight size={18} aria-hidden /></Link>
+            <Link className="btn btn-outline btn-lg" href="/#soluciones"><BarChart3 size={18} aria-hidden />Conocer servicios</Link>
+          </div>
+          <div className="ops" aria-label="Operadoras">
+            <OperatorCard name="Tigo" href="/sms-tigo" /><OperatorCard name="Personal" href="/sms-personal" /><OperatorCard name="Claro" href="/sms-claro" /><OperatorCard name="Vox" href="/sms-vox" />
+          </div>
         </div>
-        <Composer price={price} />
-      </div>
+        <div className="lh-art"><div className="lh-glow" aria-hidden /><DashMock /><PhoneMock /><WaCard /><ParaguayMap /></div>
+      </section>
 
-      <div className="container"><div className="reach"><p>Llegamos a clientes de</p><ul>
-        <li><Link href="/sms-tigo">Tigo</Link></li><li><Link href="/sms-claro">Claro</Link></li><li><Link href="/sms-personal">Personal</Link></li><li><Link href="/sms-vox">Vox</Link></li>
-      </ul></div></div>
+      <section className="container benefits" aria-label="Beneficios">
+        <Link href="/sms-masivo-paraguay" className="benefit"><span className="bi b1"><RadioTower size={26} aria-hidden /></span><div><h2>Cobertura nacional</h2><p>Llegá a Tigo, Personal, Claro y Vox desde una sola lista y una sola campaña, en todo el país.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
+        <Link href="/sms-marketing" className="benefit"><span className="bi b2"><Users size={26} aria-hidden /></span><div><h2>Campañas masivas</h2><p>Enviá a miles de contactos, personalizá cada mensaje con su nombre y revisá los resultados en reportes.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
+        <Link href="/sms-whatsapp" className="benefit"><span className="bi b3"><WhatsAppIcon size={26} /></span><div><h2>Enlace a WhatsApp</h2><p>Convertí tus SMS en conversaciones: sumá tu enlace de WhatsApp y recibí consultas de tus clientes.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
+      </section>
+
+      <section className="section container" id="probar">
+        <div className="split">
+          <div className="section-head" style={{ marginBottom: 0 }}>
+            <h2>Probá tu mensaje antes de enviarlo</h2>
+            <p>Cada SMS admite hasta 160 caracteres y cuesta 1 crédito. Escribí acá y mirá cómo lo cuenta la plataforma: te avisa si te pasás y convierte las tildes para que nunca pagues de más.</p>
+            <ul className="checks" style={{ marginTop: 20 }}>
+              <li><Check size={18} aria-hidden />Nunca se envía un mensaje de más de 160 caracteres.</li>
+              <li><Check size={18} aria-hidden />La ñ se conserva; las tildes se envían sin acento.</li>
+              <li><Check size={18} aria-hidden />Sabés el costo exacto antes de enviar.</li>
+            </ul>
+          </div>
+          <Composer price={price} />
+        </div>
+      </section>
 
       <section className="section container" id="como-funciona">
         <div className="section-head"><h2>De tu lista al celular en tres pasos</h2><p>Sin instalar nada y sin hablar con nadie.</p></div>

@@ -4,6 +4,7 @@ import "./extra.css";
 import "./docs.css";
 import "./dash.css";
 import "./site.css";
+import "./landing.css";
 import "./theme-vars.css";
 
 export const metadata: Metadata = {
