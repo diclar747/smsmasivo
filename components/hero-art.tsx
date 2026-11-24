@@ -1,4 +1,5 @@
-import { BarChart3, Check, ChevronLeft, Contact, LayoutDashboard, MapPin, Send, Wallet } from "lucide-react";
+import { BarChart3, Check, CheckCheck, ChevronLeft, Contact, LayoutDashboard, MapPin, Send, Wallet } from "lucide-react";
+import CountUp from "@/components/count-up";
 import { WhatsAppIcon } from "@/components/icons";
 
 /** Teléfono con un SMS de ejemplo (respeta las reglas de la plataforma: sin emojis, menos de 160 caracteres). */
@@ -9,7 +10,9 @@ export function PhoneMock() {
       <div className="phone-status"><b>9:41</b><span><i /><i /><i /></span></div>
       <div className="phone-head"><ChevronLeft size={18} aria-hidden /><span className="phone-avatar">S</span><b>SMS MASIVO</b></div>
       <div className="phone-chat">
+        <div className="phone-typing" aria-hidden="true"><i /><i /><i /></div>
         <div className="bubble phone-bubble">Hola, aprovechá nuestras promociones especiales solo por hoy.<br /><br />Consultá por WhatsApp haciendo clic aquí:<br /><u>https://wa.me/595981234567</u><br /><br />SMS MASIVO. Tu aliado en comunicación.<small>10:24</small></div>
+        <div className="phone-delivered" aria-hidden="true"><CheckCheck size={13} />Entregado</div>
       </div>
       <div className="phone-input"><span>Mensaje de texto</span><i><Send size={14} aria-hidden /></i></div>
     </div>
@@ -21,19 +24,19 @@ const BARS = [38, 52, 44, 66, 58, 82, 100];
 export function DashMock() {
   const items = [[LayoutDashboard, "Resumen", true], [Send, "Campañas"], [Contact, "Contactos"], [BarChart3, "Reportes"], [Wallet, "Saldo y compras"]] as const;
   return <div className="dash" aria-hidden="true">
-    <aside><b className="dash-logo">NE<em>X</em>O <span>SMS</span></b>{items.map(([Icon, label, on]) => <span key={label} className={on ? "on" : ""}><Icon size={13} />{label}</span>)}</aside>
+    <aside><b className="dash-logo">SMS <em>MASIVO</em></b>{items.map(([Icon, label, on]) => <span key={label} className={on ? "on" : ""}><Icon size={13} />{label}</span>)}</aside>
     <div className="dash-main">
       <header><b>Resumen de envíos</b><span>Vista de ejemplo</span></header>
       <div className="dash-stats">
-        <div><small>Mensajes enviados</small><b>12.430</b></div>
-        <div><small>Aceptados</small><b>99,2%</b></div>
-        <div><small>Contactos</small><b>8.215</b></div>
-        <div><small>Créditos</small><b>4.570</b></div>
+        <div><small>Mensajes enviados</small><b><CountUp to={12430} tick={9} /></b></div>
+        <div><small>Aceptados</small><b><CountUp to={99.2} decimals={1} suffix="%" /></b></div>
+        <div><small>Contactos</small><b><CountUp to={8215} /></b></div>
+        <div><small>Créditos</small><b><CountUp to={4570} /></b></div>
       </div>
       <div className="dash-row">
         <div className="dash-chart"><small>Actividad de los últimos 7 días</small><div>{BARS.map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}</div></div>
         <div className="dash-list"><small>Campañas recientes</small>
-          <p><span>Promo de octubre</span><em>Completada</em></p><p><span>Recordatorio de cuotas</span><em className="b">En curso</em></p><p><span>Clientes nuevos</span><em className="g">Borrador</em></p></div>
+          <p><span>Promo de octubre</span><em>Completada</em></p><p><span>Recordatorio de cuotas</span><em className="b"><i className="live-dot" />En curso</em></p><p><span>Clientes nuevos</span><em className="g">Borrador</em></p></div>
       </div>
     </div>
   </div>;
@@ -54,4 +57,12 @@ export function ParaguayMap() {
 
 export function OperatorCard({ name, href }: { name: string; href: string }) {
   return <a className={`op op-${name.toLowerCase()}`} href={href}><b>{name}</b><span><Check size={13} aria-hidden />Cobertura total</span></a>;
+}
+
+const TOASTS = [["Tigo", "250 SMS entregados"], ["Personal", "180 SMS entregados"], ["Claro", "140 SMS entregados"], ["Vox", "60 SMS entregados"]] as const;
+/** Avisos que entran y salen en bucle sobre la ilustración (decorativos). */
+export function HeroToasts() {
+  return <div className="lh-toasts" aria-hidden="true">
+    {TOASTS.map(([op, txt], i) => <div key={op} className={`lh-toast t${i}`}><span><Check size={14} /></span><div><b>{txt}</b><small>{op} · hace un instante</small></div></div>)}
+  </div>;
 }

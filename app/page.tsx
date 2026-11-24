@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "@/components/plain-link";
 import { ArrowRight, BarChart3, CalendarClock, Check, Code2, MessageCircle, RadioTower, Send, Users, Zap } from "lucide-react";
 import Composer from "@/components/composer";
-import { DashMock, OperatorCard, ParaguayMap, PhoneMock, WaCard } from "@/components/hero-art";
+import { DashMock, HeroToasts, OperatorCard, ParaguayMap, PhoneMock, WaCard } from "@/components/hero-art";
+import LiveSend from "@/components/live-send";
 import { WhatsAppIcon } from "@/components/icons";
 import LandingSeo from "@/components/landing-seo";
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
@@ -37,7 +38,7 @@ export default async function Home() {
     <main>
       <section className="container lh">
         <div className="lh-copy">
-          <span className="lh-pill"><Zap size={15} aria-hidden />Plataforma de SMS masivos</span>
+          <span className="lh-pill"><i className="live-dot" aria-hidden />Plataforma de SMS masivos</span>
           <h1>Llegá a miles de clientes con <span className="grad">SMS Premium</span></h1>
           <p className="lead">Enviá campañas masivas a todas las operadoras del Paraguay. Incluí tu enlace de WhatsApp y convertí mensajes en oportunidades.</p>
           <div className="lh-cta">
@@ -48,10 +49,15 @@ export default async function Home() {
             <OperatorCard name="Tigo" href="/sms-tigo" /><OperatorCard name="Personal" href="/sms-personal" /><OperatorCard name="Claro" href="/sms-claro" /><OperatorCard name="Vox" href="/sms-vox" />
           </div>
         </div>
-        <div className="lh-art"><div className="lh-glow" aria-hidden /><DashMock /><PhoneMock /><WaCard /><ParaguayMap /></div>
+        <div className="lh-art"><div className="lh-glow" aria-hidden /><DashMock /><PhoneMock /><HeroToasts /><WaCard /><ParaguayMap /></div>
       </section>
 
-      <section className="container benefits" aria-label="Beneficios">
+      <section className="section container ls-section" id="envio-en-vivo" aria-labelledby="ls-title">
+        <div className="section-head reveal"><span className="lh-pill"><Zap size={15} aria-hidden />Envío simultáneo</span><h2 id="ls-title">Tu campaña sale a todas las operadoras al mismo tiempo</h2><p>Cargás una sola lista y SMS Masivo reparte los mensajes a Tigo, Personal, Claro y Vox en segundos. Seguís el avance en vivo desde tu panel.</p></div>
+        <LiveSend />
+      </section>
+
+      <section className="container benefits reveal-kids" aria-label="Beneficios">
         <Link href="/sms-masivo-paraguay" className="benefit"><span className="bi b1"><RadioTower size={26} aria-hidden /></span><div><h2>Cobertura nacional</h2><p>Llegá a Tigo, Personal, Claro y Vox desde una sola lista y una sola campaña, en todo el país.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
         <Link href="/sms-marketing" className="benefit"><span className="bi b2"><Users size={26} aria-hidden /></span><div><h2>Campañas masivas</h2><p>Enviá a miles de contactos, personalizá cada mensaje con su nombre y revisá los resultados en reportes.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
         <Link href="/sms-whatsapp" className="benefit"><span className="bi b3"><WhatsAppIcon size={26} /></span><div><h2>Enlace a WhatsApp</h2><p>Convertí tus SMS en conversaciones: sumá tu enlace de WhatsApp y recibí consultas de tus clientes.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
@@ -73,8 +79,8 @@ export default async function Home() {
       </section>
 
       <section className="section container" id="como-funciona">
-        <div className="section-head"><h2>De tu lista al celular en tres pasos</h2><p>Sin instalar nada y sin hablar con nadie.</p></div>
-        <ol className="steps">
+        <div className="section-head reveal"><h2>De tu lista al celular en tres pasos</h2><p>Sin instalar nada y sin hablar con nadie.</p></div>
+        <ol className="steps reveal-kids">
           <li><h3>Cargá tus contactos</h3><p>Pegá los números o subí un archivo. Detectamos los inválidos y los repetidos por vos.</p></li>
           <li><h3>Escribí el mensaje</h3><p>Usá el nombre de cada cliente y otros datos. El contador te avisa antes de pasarte de 160.</p></li>
           <li><h3>Enviá o programá</h3><p>Mirá cuántos créditos usa la campaña y lanzala. Seguís el resultado en tiempo real.</p></li>
@@ -82,8 +88,8 @@ export default async function Home() {
       </section>
 
       <section className="section container" id="funciones">
-        <div className="section-head"><h2>Lo necesario para comunicarte con tus clientes</h2><p>Pensado para negocios de Paraguay: simple de usar y preciso en el costo.</p></div>
-        <div className="caps">{CAPS.map(([Icon, title, text]) => <div key={title}><h3><Icon size={20} aria-hidden/>{title}</h3><p>{text}</p></div>)}</div>
+        <div className="section-head reveal"><h2>Lo necesario para comunicarte con tus clientes</h2><p>Pensado para negocios de Paraguay: simple de usar y preciso en el costo.</p></div>
+        <div className="caps reveal-kids">{CAPS.map(([Icon, title, text]) => <div key={title}><h3><Icon size={20} aria-hidden/>{title}</h3><p>{text}</p></div>)}</div>
       </section>
 
       <section className="section container" id="api">
@@ -120,7 +126,7 @@ export default async function Home() {
 
       <LandingSeo pages={pages} price={price} />
 
-      <div className="container"><div className="cta-band"><div><h2>Hablemos con tus clientes</h2><p>Creá tu cuenta y mandá tu primera campaña hoy.</p></div><Link className="btn btn-primary btn-lg" href="/register">Crear mi cuenta</Link></div></div>
+      <div className="container"><div className="cta-band reveal"><div><h2>Hablemos con tus clientes</h2><p>Creá tu cuenta y mandá tu primera campaña hoy.</p></div><Link className="btn btn-primary btn-lg" href="/register">Crear mi cuenta</Link></div></div>
     </main>
     <SiteFooter pages={pages} />
   </div>;
