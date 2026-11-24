@@ -184,9 +184,10 @@ async function handler(r: Request, ctx: Ctx, method: string): Promise<Response> 
   const path = (await ctx.params).path;
   const route = path.join("/");
   const url = new URL(r.url);
-  // Detrás del proxy (Traefik/Cloudflare) el contenedor ve http://; usar el esquema público.
+  // Detrás del proxy (Traefik/Cloudflare) el contenedor ve http:// y el proxy interno puede poner
+  // x-forwarded-proto=http aunque el visitante entró por https: todo dominio público es https.
   const proto = r.headers.get("x-forwarded-proto")?.split(",")[0].trim();
-  if (proto === "https" || (!proto && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname))) url.protocol = "https:";
+  if (proto === "https" || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(url.hostname)) url.protocol = "https:";
   if (method !== "GET" && !r.headers.get("x-api-key")) {
     const origin = r.headers.get("origin");
     if (origin && origin !== url.origin) return err("Origen no permitido", 403);
