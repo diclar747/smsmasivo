@@ -25,7 +25,7 @@ export async function request(path: string, method = "GET", payload?: unknown): 
   return d;
 }
 
-async function loadXlsx(): Promise<any> {
+export async function loadXlsx(): Promise<any> {
   const browser = window as unknown as { XLSX?: any };
   if (browser.XLSX) return browser.XLSX;
   await new Promise<void>((resolve, reject) => { const script = document.createElement("script"); script.src = "/vendor/xlsx.min.js"; script.onload = () => resolve(); script.onerror = () => reject(new Error("No se pudo cargar el lector de Excel")); document.head.appendChild(script); });

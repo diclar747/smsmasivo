@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Ban, CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Eye, FileSpreadsheet, Pause, Pencil, Play, Plus, Search, Send, Trash2, X } from "lucide-react";
+import { Ban, CalendarClock, Check, ChevronLeft, ChevronRight, Copy, Eye, FileSpreadsheet, FileText, Pause, Pencil, Play, Plus, Printer, Search, Send, Trash2, X } from "lucide-react";
+import { exportExcel, exportPdf, printReport } from "./export";
+import { WhatsAppIcon } from "@/components/icons";
 import { prepareSms, SMS_MAX } from "@/lib/sms-text";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { type Ask, type Campaign, type Contact, type Group, type Recipient, Empty, Status, date, fmt, normalizePhone, parseSpreadsheet, pct, renderMessage, request, segmentsOf, smsIssue } from "./shared";
@@ -174,6 +176,17 @@ function Wizard({ init, balance, ask, flash, onClose, onCreated }: { init: { nam
   const step1 = name.trim().length > 0 && body.trim().length > 0 && body.length <= 1000;
   const step2 = calc.valid.length > 0 && !tooMany && calc.bad === 0;
   const step3 = when !== "later" || (!!schedule && new Date(schedule).getTime() > Date.now());
+  async function insertWhatsApp() {
+    const el = bodyRef.current;
+    const s = el?.selectionStart ?? body.length, e = el?.selectionEnd ?? body.length; // el diálogo le quita el foco al mensaje
+    let last = ""; try { last = localStorage.getItem("sms_wa_last") || ""; } catch { /* sin almacenamiento */ }
+    const v = await ask({ title: "Insertar link de WhatsApp", message: "Escribí el número de WhatsApp donde querés recibir las respuestas. Se agrega al mensaje como wa.me/595… y el cliente lo abre con un toque.", input: { label: "Número de WhatsApp (ej. 0985 768 793)", initial: last }, confirmLabel: "Insertar" });
+    if (typeof v !== "string" || !v.trim()) return;
+    const n = normalizePhone(v);
+    if (!n) { flash("Número de WhatsApp inválido. Ej.: 0985 768 793 o 595985768793"); return; }
+    try { localStorage.setItem("sms_wa_last", n); } catch { /* sin almacenamiento */ }
+    setBody(b => { const before = b.slice(0, s); const sep = before && !/\s$/.test(before) ? " " : ""; const link = `${sep}wa.me/${n}`; setTimeout(() => { el?.focus(); el?.setSelectionRange(s + link.length, s + link.length); }); return before + link + b.slice(e); });
+  }
   const insert = (v: string) => { const el = bodyRef.current; const s = el?.selectionStart ?? body.length, e = el?.selectionEnd ?? body.length; setBody(b => b.slice(0, s) + v + b.slice(e)); setTimeout(() => { el?.focus(); el?.setSelectionRange(s + v.length, s + v.length); }); };
 
   async function finish() {
@@ -196,7 +209,7 @@ function Wizard({ init, balance, ask, flash, onClose, onCreated }: { init: { nam
         {step === 1 && <>
           <label className="wz-label">Nombre de la campaña<input value={name} onChange={e => setName(e.target.value)} placeholder="Ej. Promoción de octubre" maxLength={120} autoFocus /></label>
           <label className="wz-label">Mensaje<textarea ref={bodyRef} rows={6} value={body} onChange={e => setBody(e.target.value)} placeholder="Hola {nombre}, tenemos una novedad para vos…" /></label>
-          <div className="wz-chips"><span>Insertar:</span><button onClick={() => insert("{nombre}")}>{"{nombre}"}</button><button onClick={() => insert("{numero}")}>{"{numero}"}</button></div>
+          <div className="wz-chips"><span>Insertar:</span><button onClick={() => insert("{nombre}")}>{"{nombre}"}</button><button onClick={() => insert("{numero}")}>{"{numero}"}</button><button className="wz-chip-wa" onClick={insertWhatsApp} title="Insertar un link a tu WhatsApp (wa.me)"><WhatsAppIcon size={14} /> WhatsApp</button></div>
           <div className="form-meta"><span className={prepareSms(preview).length > SMS_MAX ? "txt-bad" : ""}>{prepareSms(preview).length}/{SMS_MAX} caracteres (con datos de ejemplo)</span><span>1 crédito por mensaje</span></div>
           {prepareSms(body).changed && <div className="wz-note">Los acentos (á, í, ó, ú) y comillas especiales se envían sin tilde para que el SMS no pase de 160 caracteres. La ñ se mantiene.</div>}
           {calc.bad > 0 && <div className="wz-warn">{calc.bad} destinatario(s) superan los {SMS_MAX} caracteres o tienen caracteres no admitidos. {calc.badSample}</div>}
@@ -253,9 +266,19 @@ function Drawer({ d, busy, onClose, onStart, onStop, onEdit, onDuplicate, onRefr
   const groups: Record<string, (s: string) => boolean> = { all: () => true, ok: s => s === "aceptado" || s === "simulado", failed: s => s === "failed", pending: s => s === "pending" || s === "processing" };
   const rows = d.recipients.filter(r => groups[f](r.status) && (`${r.phone} ${r.name}`.toLowerCase().includes(q.toLowerCase())));
   const n = (k: string) => d.recipients.filter(r => groups[k](r.status)).length;
+  const FILTER_LABEL: Record<string, string> = { all: "Todos", ok: "Enviados", failed: "Fallidos", pending: "Pendientes" };
+  const report = () => ({ campaign: c, rows, filter: FILTER_LABEL[f] + (q.trim() ? ` · búsqueda "${q.trim()}"` : "") });
+  const [exporting, setExporting] = useState(false);
+  async function toExcel() { setExporting(true); try { await exportExcel(report()); } catch (e) { alert(errMsg(e, "No se pudo generar el Excel")); } finally { setExporting(false); } }
   useEffect(() => { if (c.status !== "sending") return; const t = setInterval(onRefresh, 4000); return () => clearInterval(t); }, [c.status, onRefresh]);
   return <div className="drawer-backdrop" onClick={onClose}><aside className="drawer" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
-    <header><div><h2>{c.name}</h2><div className="drawer-meta"><Status value={c.status} /><small>Creada {date(c.created_at)}</small></div></div><button className="icon-btn" onClick={onClose} aria-label="Cerrar"><X size={20} /></button></header>
+    <header><div><h2>{c.name}</h2><div className="drawer-meta"><Status value={c.status} /><small>Creada {date(c.created_at)}</small></div></div>
+      <div className="drawer-export" role="group" aria-label="Exportar historial">
+        <button className="dx-btn ghost sm" onClick={toExcel} disabled={exporting} title="Descargar en Excel (.xlsx) lo que se ve en la lista"><FileSpreadsheet size={14} /> Excel</button>
+        <button className="dx-btn ghost sm" onClick={() => exportPdf(report())} title="Descargar en PDF lo que se ve en la lista"><FileText size={14} /> PDF</button>
+        <button className="dx-btn ghost sm" onClick={() => printReport(report())} title="Imprimir lo que se ve en la lista"><Printer size={14} /> Imprimir</button>
+      </div>
+      <button className="icon-btn" onClick={onClose} aria-label="Cerrar"><X size={20} /></button></header>
     <p className="cx-body full">{c.body}</p>
     <div className="cx-progress"><div className={"dx-bar" + (c.status === "sending" ? " live" : "")}><i style={{ width: pct(c) + "%" }} /></div><span>{pct(c)}%</span></div>
     <div className="drawer-actions">

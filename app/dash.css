@@ -350,3 +350,11 @@
 @media (prefers-reduced-motion: reduce) { .wa-float::after { animation: none; } }
 @media (max-width: 560px) { .wa-float { right: 14px; bottom: 14px; } }
 .txt-bad { color: var(--t-b42318, #b42318); font-weight: 700; }
+
+/* Exportar historial de campaña */
+.drawer header > div:first-child { flex: 1; min-width: 0; }
+.drawer-export { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.drawer-export .dx-btn { padding: 7px 10px; }
+@media (max-width: 600px) { .drawer header { flex-wrap: wrap; } .drawer-export { order: 3; width: 100%; justify-content: flex-start; } }
+.wz-chips button.wz-chip-wa { display: inline-flex; align-items: center; gap: 5px; border-color: #b7ebc9; background: #eafaf0; color: #128c4a; }
+.wz-chips button.wz-chip-wa:hover { background: #d8f5e3; }
