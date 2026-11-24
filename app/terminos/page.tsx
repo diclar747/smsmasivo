@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { H, LegalPage, P } from "../legal";
 
-export const metadata: Metadata = { title: "Condiciones del Servicio · NexoSMS" };
+export const metadata: Metadata = { title: "Condiciones del Servicio · SMS Masivo" };
 
 export default function Terminos() {
   return (
     <LegalPage title="Condiciones del Servicio" updated="9 de octubre de 2026">
-      <P>Al crear una cuenta o usar NexoSMS aceptas estas condiciones.</P>
+      <P>Al crear una cuenta o usar SMS Masivo aceptas estas condiciones.</P>
       <H>El servicio</H>
-      <P>NexoSMS permite enviar SMS a números de Paraguay, gestionar contactos y campañas, consultar reportes y comprar créditos (1 SMS = 1 crédito; mensajes largos pueden consumir más de uno).</P>
+      <P>SMS Masivo permite enviar SMS a números de Paraguay, gestionar contactos y campañas, consultar reportes y comprar créditos (1 SMS = 1 crédito; mensajes largos pueden consumir más de uno).</P>
       <H>Tu cuenta</H>
       <P>Debes dar datos verdaderos y cuidar tu contraseña y claves de API. Eres responsable de la actividad realizada con tu cuenta.</P>
       <H>Uso aceptable</H>

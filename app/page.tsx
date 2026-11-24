@@ -8,14 +8,14 @@ import LandingSeo from "@/components/landing-seo";
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { getPrice } from "@/lib/price";
 import { seoPages } from "@/lib/seo-pages";
-import { SITE_URL } from "@/lib/site";
+import { KEYWORDS, SITE_NAME, SITE_URL } from "@/lib/site";
 
-const TITLE = "SMS masivo Paraguay | Envío de SMS a Tigo, Claro, Personal y Vox";
-const DESC = "Plataforma de SMS masivos en Paraguay: campañas, SMS marketing, cobranzas y API para empresas. Enviá a Tigo, Claro, Personal y Vox. Sin mensualidad.";
+const TITLE = "SMS Masivo | SMS masivos en Paraguay a Tigo, Claro, Personal y Vox";
+const DESC = "SMS Masivo: plataforma de SMS masivos en Paraguay. Campañas de SMS, SMS marketing, cobranzas, recordatorios y API para empresas. Enviá a Tigo, Claro, Personal y Vox. Sin mensualidad.";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: { absolute: TITLE }, description: DESC, alternates: { canonical: SITE_URL },
-  openGraph: { type: "website", url: SITE_URL, title: TITLE, description: DESC, siteName: "NexoSMS", locale: "es_PY", images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: "NexoSMS - SMS masivo en Paraguay" }] },
+  title: { absolute: TITLE }, description: DESC, keywords: KEYWORDS, alternates: { canonical: SITE_URL },
+  openGraph: { type: "website", url: SITE_URL, title: TITLE, description: DESC, siteName: SITE_NAME, locale: "es_PY", images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: "SMS Masivo - envío de SMS masivos en Paraguay" }] },
   twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: [`${SITE_URL}/og-image.png`] },
 };
 
@@ -94,7 +94,7 @@ export default async function Home() {
             <div className="hero-cta"><Link className="btn btn-primary" href="/api-sms">Conocer la API</Link><Link className="btn btn-ghost" href="/docs">Probarla en línea</Link></div>
           </div>
           <div>
-            <div className="code"><header><span>POST /api/messages</span><span>cURL</span></header><pre>{`curl -X POST https://nexosms.cnid.com.py/api/messages \\
+            <div className="code"><header><span>POST /api/messages</span><span>cURL</span></header><pre>{`curl -X POST https://smsmasivo.cd.com.py/api/messages \\
   -H "X-API-Key: sms_TU_CLAVE" \\
   -H "Content-Type: application/json" \\
   -d '{"phone":"0981123456",

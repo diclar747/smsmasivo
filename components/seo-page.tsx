@@ -2,22 +2,24 @@ import type { Metadata } from "next";
 import Link from "@/components/plain-link";
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { prepareSms, SMS_MAX } from "@/lib/sms-text";
-import { abs, DEFAULT_PRICE, LAST_MOD, SITE_NAME, SITE_URL, WHATSAPP_PHONE } from "@/lib/site";
+import { abs, DEFAULT_PRICE, KEYWORDS, LAST_MOD, LOGO_URL, SITE_DESCRIPTION, SITE_NAME, SITE_URL, WHATSAPP_PHONE } from "@/lib/site";
 import { blurb, type SeoPage, seoPages } from "@/lib/seo-pages";
 
 export function pageMetadata(page: SeoPage): Metadata {
   const url = abs(`/${page.slug}`);
   return {
     title: { absolute: page.title }, description: page.description,
+    keywords: [...new Set([page.keyword, page.label, `${page.label} Paraguay`, ...KEYWORDS.slice(0, 14)])],
     alternates: { canonical: url },
-    openGraph: { type: "website", url, title: page.title, description: page.description, siteName: SITE_NAME, locale: "es_PY", images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: "NexoSMS - SMS masivo en Paraguay" }] },
+    openGraph: { type: "website", url, title: page.title, description: page.description, siteName: SITE_NAME, locale: "es_PY", images: [{ url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: "SMS Masivo - envío de SMS masivos en Paraguay" }] },
     twitter: { card: "summary_large_image", title: page.title, description: page.description, images: [`${SITE_URL}/og-image.png`] },
     robots: { index: true, follow: true },
   };
 }
 
 export const orgLd = {
-  "@type": "Organization", "@id": `${SITE_URL}/#org`, name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/favicon.svg`,
+  "@type": "Organization", "@id": `${SITE_URL}/#org`, name: SITE_NAME, alternateName: ["SMS Masivo Paraguay", "smsmasivo"], url: SITE_URL,
+  logo: { "@type": "ImageObject", url: LOGO_URL, width: 512, height: 512 }, description: SITE_DESCRIPTION, areaServed: "PY",
   contactPoint: { "@type": "ContactPoint", telephone: WHATSAPP_PHONE, contactType: "customer service", areaServed: "PY", availableLanguage: "es" },
 };
 

@@ -1,4 +1,4 @@
-/* NexoSMS · sistema de diseño del sitio público (landing, SEO, docs, auth, legales).
+/* SMS Masivo · sistema de diseño del sitio público (landing, SEO, docs, auth, legales).
    Claro por defecto; oscuro con html[data-theme="dark"]. */
 @font-face { font-family: "Bricolage Grotesque"; src: url(/fonts/Bricolage-Grotesque.woff2) format("woff2"); font-weight: 500 800; font-display: swap; }
 @font-face { font-family: "Public Sans"; src: url(/fonts/Public-Sans.woff2) format("woff2"); font-weight: 400 700; font-display: swap; }

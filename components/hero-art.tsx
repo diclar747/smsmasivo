@@ -7,9 +7,9 @@ export function PhoneMock() {
     <div className="phone-screen">
       <div className="phone-island" />
       <div className="phone-status"><b>9:41</b><span><i /><i /><i /></span></div>
-      <div className="phone-head"><ChevronLeft size={18} aria-hidden /><span className="phone-avatar">N</span><b>NEXO SMS</b></div>
+      <div className="phone-head"><ChevronLeft size={18} aria-hidden /><span className="phone-avatar">S</span><b>SMS MASIVO</b></div>
       <div className="phone-chat">
-        <div className="bubble phone-bubble">Hola, aprovechá nuestras promociones especiales solo por hoy.<br /><br />Consultá por WhatsApp haciendo clic aquí:<br /><u>https://wa.me/595981234567</u><br /><br />NEXO SMS. Tu aliado en comunicación.<small>10:24</small></div>
+        <div className="bubble phone-bubble">Hola, aprovechá nuestras promociones especiales solo por hoy.<br /><br />Consultá por WhatsApp haciendo clic aquí:<br /><u>https://wa.me/595981234567</u><br /><br />SMS MASIVO. Tu aliado en comunicación.<small>10:24</small></div>
       </div>
       <div className="phone-input"><span>Mensaje de texto</span><i><Send size={14} aria-hidden /></i></div>
     </div>

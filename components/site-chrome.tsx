@@ -35,6 +35,6 @@ export function SiteFooter({ pages }: { pages: SeoPage[] }) {
       <div><h3>Más</h3>{pages.slice(7).map(p => <Link key={p.slug} href={`/${p.slug}`}>{p.label}</Link>)}<Link href="/docs">Documentación API</Link></div>
       <div><h3>Cuenta y legal</h3><Link href="/login">Ingresar</Link><Link href="/register">Crear cuenta</Link><Link href="/privacidad">Privacidad</Link><Link href="/terminos">Términos</Link></div>
     </div>
-    <small>© 2026 NexoSMS. SMS masivo en todo Paraguay.</small>
+    <small>© 2026 SMS Masivo. SMS masivo en todo Paraguay.</small>
   </div></footer>;
 }

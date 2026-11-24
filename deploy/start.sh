@@ -19,6 +19,6 @@ export CLOUDFLARE_CF_FETCH_ENABLED=false WRANGLER_SEND_METRICS=false WRANGLER_WR
 echo "Aplicando migraciones…"
 node deploy/migrate.mjs
 
-echo "Iniciando NexoSMS en el puerto $PORT"
+echo "Iniciando SMS Masivo en el puerto $PORT"
 exec node node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local \
   --persist-to "$DATA_DIR" --ip 0.0.0.0 --port "$PORT" --inspector-port 0

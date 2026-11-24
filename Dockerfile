@@ -1,4 +1,4 @@
-# NexoSMS — imagen para Dokploy / cualquier host con Docker.
+# SMS Masivo — imagen para Dokploy / cualquier host con Docker.
 # La app es un Worker (vinext) que corre con wrangler en modo local y guarda los datos en PostgreSQL (DATABASE_URL).
 FROM node:22-bookworm-slim
 

@@ -37,9 +37,11 @@
 .logo { display: inline-flex; flex-direction: column; gap: 5px; color: var(--ink); }
 .logo-top { display: inline-flex; align-items: baseline; gap: 9px; font: 800 31px/1 var(--display); letter-spacing: -.045em; }
 .logo-word { display: inline-flex; align-items: center; }
-.logo-x { width: .92em; height: .92em; margin: 0 .03em; align-self: center; }
+.logo-mark { width: 1.18em; height: 1.18em; align-self: center; flex: none; margin-right: 1px; }
+.logo-top .logo-sms { margin-left: -2px; }
 .logo-sms { color: var(--brand-text); }
-.logo-tag { font: 600 9px/1 var(--sans); letter-spacing: .24em; color: var(--ink-3); }
+.logo-tag { font: 600 9px/1 var(--sans); letter-spacing: .24em; color: var(--ink-3); padding-left: calc(1.18 * 31px + 9px); }
+.site-footer .logo-tag, .auth-top .logo-tag { padding-left: calc(1.18 * 26px + 9px); }
 .site-footer .logo-top, .auth-top .logo-top { font-size: 26px; }
 
 /* Navegación */
@@ -50,6 +52,7 @@
 .nav-links a.on { color: var(--brand-text); box-shadow: inset 0 -3px 0 var(--brand); }
 @media (max-width: 880px) { .nav-in { height: 68px; } .logo-top { font-size: 26px; } .nav-cta { padding: 10px 14px; } }
 @media (max-width: 520px) { .nav-actions .nav-cta { display: none; } .logo-tag { display: none; } }
+@media (max-width: 880px) { .logo-tag { padding-left: calc(1.18 * 26px + 9px); } }
 
 /* Héroe */
 .lh { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.1fr); gap: 20px; align-items: center; padding: clamp(28px, 4vw, 56px) 0 clamp(40px, 5vw, 76px); }

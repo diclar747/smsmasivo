@@ -1,4 +1,4 @@
-# NexoSMS
+# SMS Masivo
 
 Plataforma de SMS para Paraguay con landing, cuentas, contactos, campañas, reportes, saldo, administración y API.
 

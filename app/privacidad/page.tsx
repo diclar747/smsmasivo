@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { H, LegalPage, P } from "../legal";
 
-export const metadata: Metadata = { title: "Política de Privacidad · NexoSMS" };
+export const metadata: Metadata = { title: "Política de Privacidad · SMS Masivo" };
 
 export default function Privacidad() {
   return (
     <LegalPage title="Política de Privacidad" updated="9 de octubre de 2026">
-      <P>NexoSMS es una plataforma de envío de SMS para Paraguay. Esta política explica qué datos tratamos, para qué y cómo los protegemos.</P>
+      <P>SMS Masivo es una plataforma de envío de SMS para Paraguay. Esta política explica qué datos tratamos, para qué y cómo los protegemos.</P>
       <H>Datos que recopilamos</H>
       <P>Datos de cuenta (nombre, correo electrónico y, si inicias sesión con Google, tu identificador de Google y foto de perfil); contactos y números de teléfono que cargas; mensajes y campañas que envías; y registros de compras y saldo.</P>
       <H>Inicio de sesión con Google</H>

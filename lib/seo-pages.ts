@@ -25,10 +25,10 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
       title: "SMS masivo Paraguay | Envío a Tigo, Claro, Personal y Vox",
       description: `Plataforma de SMS masivos en Paraguay: enviá campañas a todo el país desde la web o por API. ${gs(price)} por SMS, créditos que no vencen. Empezá gratis.`,
       h1: "SMS masivo en Paraguay, desde una sola plataforma",
-      lead: "Enviá mensajes de texto a miles de clientes en todo el país en minutos: cargás tu lista, escribís el mensaje y NexoSMS se encarga del envío a Tigo, Claro, Personal y Vox.",
+      lead: "Enviá mensajes de texto a miles de clientes en todo el país en minutos: cargás tu lista, escribís el mensaje y SMS Masivo se encarga del envío a Tigo, Claro, Personal y Vox.",
       sections: [
-        { h2: "Qué es el envío de SMS masivos", p: ["El SMS masivo (o mensajería masiva) permite mandar un mismo mensaje de texto, o uno personalizado con el nombre de cada cliente, a una lista grande de números de celular. Llega directo al teléfono, sin necesidad de internet ni de instalar ninguna aplicación.", "Con NexoSMS podés enviar SMS online desde cualquier computadora, usando nuestro panel web, o integrarlo a tu sistema con la API."] },
-        { h2: "Cómo enviar SMS masivos en Paraguay con NexoSMS", ul: STEPS },
+        { h2: "Qué es el envío de SMS masivos", p: ["El SMS masivo (o mensajería masiva) permite mandar un mismo mensaje de texto, o uno personalizado con el nombre de cada cliente, a una lista grande de números de celular. Llega directo al teléfono, sin necesidad de internet ni de instalar ninguna aplicación.", "Con SMS Masivo podés enviar SMS online desde cualquier computadora, usando nuestro panel web, o integrarlo a tu sistema con la API."] },
+        { h2: "Cómo enviar SMS masivos en Paraguay con SMS Masivo", ul: STEPS },
         { h2: "Todo lo que incluye la plataforma", ul: ["Campañas de hasta 2.000 destinatarios, con envío inmediato o programado.", "Personalización con el nombre del cliente y otros datos de tu lista (Excel, CSV o pegando números).", "Reportes por fecha, estado y campaña, con exportación a CSV.", "Lista de exclusión: los números que no quieren recibir mensajes nunca reciben SMS.", "Saldo en créditos que no vencen y sin mensualidad.", "API REST para enviar desde tu aplicación, CRM o ERP."] },
         { h2: "SMS a todo Paraguay", p: [`Los SMS llegan a cualquier número móvil paraguayo, sin importar la operadora ni la ciudad: ${CITIES}, y todo el interior del país. Cubrimos los departamentos ${DEPARTMENTS}, entre otros.`] },
         { h2: "Ejemplo de mensaje masivo", example: "Hola {nombre}, esta semana 20% de descuento en toda la tienda. Mostrá este SMS en caja. Hasta el domingo.", exampleLabel: "Mensaje de ejemplo (1 crédito)" },
@@ -56,7 +56,7 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
         { h2: "Buenas prácticas de SMS marketing", ul: ["Enviá solo a personas que aceptaron recibir tus mensajes.", "Identificá tu marca al inicio del mensaje.", "Mantené el texto corto, claro y con una sola llamada a la acción.", "Respetá la lista de exclusión: si alguien pide no recibir más, agregalo."] },
       ],
       faq: [
-        { q: "¿Puedo hacer publicidad por SMS en Paraguay?", a: "Sí, siempre que cuentes con el consentimiento de los destinatarios y respetes quienes piden no recibir mensajes. NexoSMS incluye una lista de exclusión para eso." },
+        { q: "¿Puedo hacer publicidad por SMS en Paraguay?", a: "Sí, siempre que cuentes con el consentimiento de los destinatarios y respetes quienes piden no recibir mensajes. SMS Masivo incluye una lista de exclusión para eso." },
         { q: "¿Puedo incluir un enlace en el SMS?", a: "Sí, podés incluir un enlace a tu web o un enlace directo a WhatsApp, siempre dentro de los 160 caracteres del mensaje." },
         { q: "¿Cuánto cuesta una campaña?", a: "Cada SMS consume 1 crédito. Una campaña de 1.000 destinatarios consume 1.000 créditos." },
       ],
@@ -69,7 +69,7 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
       h1: "SMS Premium: mensajes de alto impacto para tus mejores clientes",
       lead: "Comunicaciones cuidadas, personalizadas y medibles para tus clientes más valiosos: ofertas exclusivas, atención VIP y avisos importantes.",
       sections: [
-        { h2: "Qué entendemos por SMS Premium", p: ["En NexoSMS, “premium” significa un envío cuidado: segmentado, personalizado con el nombre del cliente, en el momento justo y con seguimiento de resultados. No se trata de números de tarifa especial ni de servicios con cobro al destinatario: el mensaje lo paga la empresa y el cliente lo recibe sin costo."] },
+        { h2: "Qué entendemos por SMS Premium", p: ["En SMS Masivo, “premium” significa un envío cuidado: segmentado, personalizado con el nombre del cliente, en el momento justo y con seguimiento de resultados. No se trata de números de tarifa especial ni de servicios con cobro al destinatario: el mensaje lo paga la empresa y el cliente lo recibe sin costo."] },
         { h2: "Ideal para", ul: ["Clientes VIP y ofertas exclusivas.", "Avisos importantes que no pueden pasar desapercibidos.", "Invitaciones a lanzamientos y eventos privados.", "Seguimiento postventa y encuestas de satisfacción."] },
         { h2: "Qué lo hace diferente", ul: ["Personalización con los datos de cada cliente.", "Programación a la hora ideal.", "Enlace directo a WhatsApp para continuar la conversación.", "Reportes con el estado de cada envío.", "Lista de exclusión para respetar a quien no quiere recibir mensajes."] },
         { h2: "Ejemplo de SMS Premium", example: "Sr/a {nombre}, como cliente destacado tenés acceso anticipado a nuestra nueva colección. Escribinos: wa.me/595994854167", exampleLabel: "Mensaje de ejemplo (1 crédito)" },
@@ -82,12 +82,12 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     },
     {
       slug: "sms-empresarial", label: "SMS empresarial", keyword: "SMS empresarial Paraguay",
-      title: "SMS empresarial y corporativo en Paraguay | NexoSMS",
+      title: "SMS empresarial y corporativo en Paraguay | SMS Masivo",
       description: "SMS empresarial en Paraguay para comercios, instituciones y organizaciones: comunicación masiva, notificaciones y API. Sin mensualidad.",
       h1: "SMS empresarial y corporativo para tu organización",
       lead: "Mantené informados a clientes, socios y colaboradores con mensajería corporativa simple de usar, con reportes y sin contratos ni mensualidades.",
       sections: [
-        { h2: "Mensajería de texto empresarial", p: ["NexoSMS es un servicio de SMS para empresas, comercios, instituciones y organizaciones que necesitan comunicarse con muchas personas a la vez, con control sobre qué se envía, cuándo y a quién."] },
+        { h2: "Mensajería de texto empresarial", p: ["SMS Masivo es un servicio de SMS para empresas, comercios, instituciones y organizaciones que necesitan comunicarse con muchas personas a la vez, con control sobre qué se envía, cuándo y a quién."] },
         { h2: "Para qué sectores", ul: ["Comercios y tiendas: promociones y avisos de pedidos.", "Clínicas, farmacias y hospitales: recordatorios de citas y turnos.", "Colegios, escuelas y universidades: comunicados y convocatorias.", "Financieras, cooperativas y bancos: recordatorios de pago.", "Inmobiliarias, aseguradoras y empresas de servicios: avisos y atención al cliente.", "Hoteles, restaurantes, delivery y logística: confirmaciones y seguimiento.", "Municipalidades, instituciones públicas y asociaciones: campañas informativas."] },
         { h2: "Funciones corporativas", ul: ["Cuenta con panel web para todo tu equipo de trabajo.", "Campañas por lotes, programadas o inmediatas.", "API REST para integrar con tu CRM, ERP o sistema propio.", "Historial completo de envíos, exportable a CSV.", "Compra por créditos prepagos: controlás el gasto."] },
       ],
@@ -100,11 +100,11 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     {
       slug: "sms-tigo", label: "SMS Tigo", keyword: "SMS Tigo Paraguay",
       title: "SMS a Tigo Paraguay | Envío masivo de mensajes",
-      description: "Enviá SMS masivos a clientes de Tigo en Paraguay desde NexoSMS: campañas, promociones y avisos desde la web o por API. Sin mensualidad.",
+      description: "Enviá SMS masivos a clientes de Tigo en Paraguay desde SMS Masivo: campañas, promociones y avisos desde la web o por API. Sin mensualidad.",
       h1: "SMS masivo a Tigo Paraguay",
       lead: "Si tu base de clientes tiene muchos usuarios de Tigo, podés enviarles mensajes masivos desde la misma plataforma que usás para el resto de las operadoras.",
       sections: [
-        { h2: "Enviar SMS a números Tigo", p: ["Importá tu lista de contactos y NexoSMS reconoce cualquier número móvil paraguayo válido, sea Tigo o de otra operadora. No tenés que separar la lista ni hacer envíos distintos: una campaña llega a todos."] },
+        { h2: "Enviar SMS a números Tigo", p: ["Importá tu lista de contactos y SMS Masivo reconoce cualquier número móvil paraguayo válido, sea Tigo o de otra operadora. No tenés que separar la lista ni hacer envíos distintos: una campaña llega a todos."] },
         { h2: "Usos frecuentes en clientes Tigo", ul: ["Promociones y ofertas para tu comercio.", "Avisos de pedidos, entregas y turnos.", "Recordatorios de pago y vencimientos.", "Invitaciones a eventos."] },
         { h2: "Ejemplo", example: "Hola {nombre}, tu pedido #{numero} salió a reparto y llega hoy. Gracias por elegirnos.", exampleLabel: "Aviso de pedido (1 crédito)" },
         { h2: "También funciona con", p: ["Claro, Personal y Vox: el mismo envío sirve para todas las operadoras."] },
@@ -118,11 +118,11 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     {
       slug: "sms-claro", label: "SMS Claro", keyword: "SMS Claro Paraguay",
       title: "SMS a Claro Paraguay | Envío masivo de mensajes",
-      description: "Enviá SMS masivos a clientes de Claro en Paraguay con NexoSMS: recordatorios, cobranzas y campañas desde la web o por API. Créditos que no vencen.",
+      description: "Enviá SMS masivos a clientes de Claro en Paraguay con SMS Masivo: recordatorios, cobranzas y campañas desde la web o por API. Créditos que no vencen.",
       h1: "SMS masivo a Claro Paraguay",
       lead: "Llegá a los clientes de Claro con recordatorios, avisos y campañas, usando la misma plataforma que para Tigo, Personal y Vox.",
       sections: [
-        { h2: "Enviar SMS a números Claro", p: ["Cargá tu base de contactos y enviá. NexoSMS acepta todos los números móviles de Paraguay, incluidos los de Claro, y normaliza el formato por vos (por ejemplo 0991 123 456)."] },
+        { h2: "Enviar SMS a números Claro", p: ["Cargá tu base de contactos y enviá. SMS Masivo acepta todos los números móviles de Paraguay, incluidos los de Claro, y normaliza el formato por vos (por ejemplo 0991 123 456)."] },
         { h2: "Casos de uso", ul: ["Recordatorios de pago y vencimiento de cuotas.", "Confirmación de citas y reservas.", "Avisos de servicio al cliente.", "Notificaciones automáticas desde tu sistema con la API."] },
         { h2: "Ejemplo", example: "{nombre}, tu cuota vence el 15/10. Podés pagar por transferencia o en caja. Gracias.", exampleLabel: "Recordatorio de pago (1 crédito)" },
       ],
@@ -135,7 +135,7 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     {
       slug: "sms-personal", label: "SMS Personal", keyword: "SMS Personal Paraguay",
       title: "SMS a Personal Paraguay | Envío masivo de mensajes",
-      description: "Enviá SMS masivos a clientes de Personal en Paraguay con NexoSMS: convocatorias, avisos y promociones por panel web o API. Sin mensualidad.",
+      description: "Enviá SMS masivos a clientes de Personal en Paraguay con SMS Masivo: convocatorias, avisos y promociones por panel web o API. Sin mensualidad.",
       h1: "SMS masivo a Personal Paraguay",
       lead: "Convocá, avisá y vendé: enviá SMS a los números de Personal junto con el resto de las operadoras, en una sola campaña.",
       sections: [
@@ -152,11 +152,11 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     {
       slug: "sms-vox", label: "SMS Vox", keyword: "SMS Vox Paraguay",
       title: "SMS a Vox Paraguay | Envío masivo de mensajes",
-      description: "Enviá SMS masivos a clientes de Vox en Paraguay con NexoSMS: avisos, notificaciones y campañas desde la web o por API. Créditos que no vencen.",
+      description: "Enviá SMS masivos a clientes de Vox en Paraguay con SMS Masivo: avisos, notificaciones y campañas desde la web o por API. Créditos que no vencen.",
       h1: "SMS masivo a Vox Paraguay",
       lead: "Incluí a los usuarios de Vox en tus campañas: la misma lista, el mismo envío y el mismo precio por mensaje que para las demás operadoras.",
       sections: [
-        { h2: "Enviar SMS a números Vox", p: ["No hace falta una cuenta distinta por operadora. Con NexoSMS enviás a Vox, Tigo, Claro y Personal desde un único panel o con una sola llamada a la API."] },
+        { h2: "Enviar SMS a números Vox", p: ["No hace falta una cuenta distinta por operadora. Con SMS Masivo enviás a Vox, Tigo, Claro y Personal desde un único panel o con una sola llamada a la API."] },
         { h2: "Casos de uso", ul: ["Avisos institucionales y de servicios.", "Notificaciones automáticas de tu aplicación.", "Recordatorios y confirmaciones.", "Campañas informativas para organizaciones e instituciones."] },
         { h2: "Ejemplo", example: "Estimado/a {nombre}, le informamos que su trámite fue aprobado. Retírelo en ventanilla desde mañana.", exampleLabel: "Aviso institucional (1 crédito)" },
       ],
@@ -175,10 +175,10 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
       sections: [
         { h2: "Gateway SMS para desarrolladores", p: ["Generás una API Key en tu panel y la enviás en el encabezado X-API-Key. Con eso podés enviar mensajes individuales, crear y ejecutar campañas, consultar el saldo y revisar el historial de envíos, todo en JSON."] },
         { h2: "Enviar un SMS con la API", code: [
-          { lang: "cURL", text: `curl -X POST https://nexosms.cnid.com.py/api/messages \\\n  -H "X-API-Key: sms_TU_CLAVE" \\\n  -H "Content-Type: application/json" \\\n  -d '{"phone":"0981123456","message":"Hola, tu pedido está listo."}'` },
-          { lang: "Node.js", text: `const res = await fetch("https://nexosms.cnid.com.py/api/messages", {\n  method: "POST",\n  headers: { "X-API-Key": process.env.SMS_KEY, "Content-Type": "application/json" },\n  body: JSON.stringify({ phone: "0981123456", message: "Hola, tu pedido está listo." }),\n});\nconsole.log(await res.json());` },
-          { lang: "Python", text: `import requests\nr = requests.post("https://nexosms.cnid.com.py/api/messages",\n    headers={"X-API-Key": "sms_TU_CLAVE"},\n    json={"phone": "0981123456", "message": "Hola, tu pedido está listo."})\nprint(r.json())` },
-          { lang: "PHP", text: `$ch = curl_init("https://nexosms.cnid.com.py/api/messages");\ncurl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,\n  CURLOPT_HTTPHEADER => ["X-API-Key: sms_TU_CLAVE", "Content-Type: application/json"],\n  CURLOPT_POSTFIELDS => json_encode(["phone" => "0981123456", "message" => "Hola, tu pedido está listo."])]);\necho curl_exec($ch);` },
+          { lang: "cURL", text: `curl -X POST https://smsmasivo.cd.com.py/api/messages \\\n  -H "X-API-Key: sms_TU_CLAVE" \\\n  -H "Content-Type: application/json" \\\n  -d '{"phone":"0981123456","message":"Hola, tu pedido está listo."}'` },
+          { lang: "Node.js", text: `const res = await fetch("https://smsmasivo.cd.com.py/api/messages", {\n  method: "POST",\n  headers: { "X-API-Key": process.env.SMS_KEY, "Content-Type": "application/json" },\n  body: JSON.stringify({ phone: "0981123456", message: "Hola, tu pedido está listo." }),\n});\nconsole.log(await res.json());` },
+          { lang: "Python", text: `import requests\nr = requests.post("https://smsmasivo.cd.com.py/api/messages",\n    headers={"X-API-Key": "sms_TU_CLAVE"},\n    json={"phone": "0981123456", "message": "Hola, tu pedido está listo."})\nprint(r.json())` },
+          { lang: "PHP", text: `$ch = curl_init("https://smsmasivo.cd.com.py/api/messages");\ncurl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,\n  CURLOPT_HTTPHEADER => ["X-API-Key: sms_TU_CLAVE", "Content-Type: application/json"],\n  CURLOPT_POSTFIELDS => json_encode(["phone" => "0981123456", "message" => "Hola, tu pedido está listo."])]);\necho curl_exec($ch);` },
         ] },
         { h2: "Qué podés hacer con la API", ul: ["Enviar SMS individuales y por lotes (campañas).", "Consultar saldo y movimientos.", "Consultar el historial con filtros por fecha, estado y texto.", "Seguir una campaña en línea: enviados, fallidos y destinatarios.", "Gestionar la lista de números excluidos."] },
         { h2: "Integraciones", p: ["Funciona con cualquier lenguaje que haga peticiones HTTP: PHP, Node.js, Python, JavaScript, Java, .NET y más. Ideal para conectar tu CRM, ERP, tienda online o aplicación y automatizar los avisos."] },
@@ -194,12 +194,12 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     {
       slug: "sms-whatsapp", label: "SMS con enlace a WhatsApp", keyword: "SMS con enlace WhatsApp",
       title: "SMS con enlace a WhatsApp | Iniciá conversaciones",
-      description: "Enviá SMS con un link directo a WhatsApp y convertí cada mensaje en una conversación con tu cliente. Campañas y envíos desde NexoSMS en Paraguay.",
+      description: "Enviá SMS con un link directo a WhatsApp y convertí cada mensaje en una conversación con tu cliente. Campañas y envíos desde SMS Masivo en Paraguay.",
       h1: "SMS con enlace a WhatsApp para iniciar conversaciones",
       lead: "Combiná el alcance del SMS con la comodidad de WhatsApp: tu cliente toca el enlace y te escribe con un mensaje ya preparado.",
       sections: [
         { h2: "Cómo funciona", ul: ["Enviás un SMS con un enlace del tipo wa.me/595XXXXXXXXX.", "El cliente toca el enlace y se abre WhatsApp con tu número.", "Podés dejar un texto inicial para que solo tenga que enviarlo."] },
-        { h2: "En NexoSMS, en un clic", p: ["En el envío de SMS individual del panel podés agregar tu enlace de WhatsApp al mensaje con un solo botón. En campañas lo incluís en el texto como cualquier otro enlace."], example: "Hola {nombre}, ¿te ayudamos con tu pedido? Escribinos por WhatsApp: wa.me/595994854167", exampleLabel: "Ejemplo con enlace (1 crédito)" },
+        { h2: "En SMS Masivo, en un clic", p: ["En el envío de SMS individual del panel podés agregar tu enlace de WhatsApp al mensaje con un solo botón. En campañas lo incluís en el texto como cualquier otro enlace."], example: "Hola {nombre}, ¿te ayudamos con tu pedido? Escribinos por WhatsApp: wa.me/595994854167", exampleLabel: "Ejemplo con enlace (1 crédito)" },
         { h2: "Cuándo usarlo", ul: ["Captar consultas de promociones y ofertas.", "Atención al cliente y soporte.", "Confirmación de pedidos y citas.", "Seguimiento de ventas."] },
         { h2: "Cuidá el largo", p: ["El enlace cuenta dentro de los 160 caracteres. Usá enlaces cortos para dejar espacio al mensaje."] },
       ],
@@ -229,7 +229,7 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     },
     {
       slug: "sms-notificaciones", label: "SMS notificaciones", keyword: "SMS de notificaciones",
-      title: "SMS de notificaciones, avisos y recordatorios | NexoSMS",
+      title: "SMS de notificaciones, avisos y recordatorios | SMS Masivo",
       description: "SMS de notificaciones en Paraguay: confirmación de citas, turnos, pedidos y recordatorios automáticos para clínicas, colegios, delivery y más.",
       h1: "SMS de notificaciones, avisos y recordatorios",
       lead: "Mantené informados a tus clientes con avisos automáticos o programados: citas, turnos, pedidos, reservas y comunicados.",
@@ -247,17 +247,17 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
     },
     {
       slug: "sms-otp", label: "SMS de verificación (OTP)", keyword: "SMS de verificación OTP Paraguay",
-      title: "SMS de verificación OTP por API | NexoSMS Paraguay",
-      description: "Enviá códigos de verificación OTP por SMS en Paraguay con la API de NexoSMS: registro, acceso y recuperación de contraseña. Integración simple.",
+      title: "SMS de verificación OTP por API | SMS Masivo Paraguay",
+      description: "Enviá códigos de verificación OTP por SMS en Paraguay con la API de SMS Masivo: registro, acceso y recuperación de contraseña. Integración simple.",
       h1: "SMS de verificación y códigos OTP por API",
       lead: "Enviá códigos de un solo uso a tus usuarios para validar cuentas, confirmar registros o recuperar contraseñas, desde tu aplicación.",
       sections: [
-        { h2: "Cómo enviar un código de verificación", p: ["Tu aplicación genera el código, lo guarda con un tiempo de vencimiento y lo envía con una sola llamada a la API. NexoSMS entrega el SMS; la verificación del código la hacés vos en tu sistema."], code: [{ lang: "cURL", text: `curl -X POST https://nexosms.cnid.com.py/api/messages \\\n  -H "X-API-Key: sms_TU_CLAVE" -H "Content-Type: application/json" \\\n  -d '{"phone":"0981123456","message":"Tu codigo de verificacion es 482915. Vence en 10 minutos."}'` }] },
+        { h2: "Cómo enviar un código de verificación", p: ["Tu aplicación genera el código, lo guarda con un tiempo de vencimiento y lo envía con una sola llamada a la API. SMS Masivo entrega el SMS; la verificación del código la hacés vos en tu sistema."], code: [{ lang: "cURL", text: `curl -X POST https://smsmasivo.cd.com.py/api/messages \\\n  -H "X-API-Key: sms_TU_CLAVE" -H "Content-Type: application/json" \\\n  -d '{"phone":"0981123456","message":"Tu codigo de verificacion es 482915. Vence en 10 minutos."}'` }] },
         { h2: "Casos de uso", ul: ["Validar cuentas y confirmar registros.", "Recuperación de contraseña.", "Doble factor (2FA) en acceso a plataformas.", "Confirmación de operaciones."] },
         { h2: "Recomendaciones", ul: ["Usá códigos de 4 a 6 dígitos con vencimiento corto.", "Limitá los reenvíos por usuario para evitar abusos.", "Prevé un reenvío manual: la entrega final depende de la operadora y del teléfono del usuario.", "Mantené el mensaje corto: hasta 160 caracteres, 1 crédito."] },
       ],
       faq: [
-        { q: "¿NexoSMS genera el código?", a: "No. Tu sistema genera y valida el código; NexoSMS se encarga de enviarlo por SMS." },
+        { q: "¿SMS Masivo genera el código?", a: "No. Tu sistema genera y valida el código; SMS Masivo se encarga de enviarlo por SMS." },
         { q: "¿Cuánto cuesta cada código?", a: `Cada SMS consume 1 crédito (${gs(price)}).` },
       ],
       related: ["api-sms", "sms-notificaciones", "precios-sms", "sms-empresarial"],
@@ -276,7 +276,7 @@ export function seoPages(price: number = DEFAULT_PRICE): SeoPage[] {
         { h2: "Empresas y volúmenes grandes", p: ["Si necesitás cotizar un volumen alto o una integración especial, escribinos por WhatsApp y armamos una propuesta."] },
       ],
       faq: [
-        { q: "¿Cuánto cuesta enviar un SMS en Paraguay?", a: `${gs(price)} por SMS en NexoSMS, sin importar la operadora (Tigo, Claro, Personal o Vox).` },
+        { q: "¿Cuánto cuesta enviar un SMS en Paraguay?", a: `${gs(price)} por SMS en SMS Masivo, sin importar la operadora (Tigo, Claro, Personal o Vox).` },
         { q: "¿Los créditos vencen?", a: "No. Los créditos no tienen fecha de vencimiento." },
         { q: "¿Hay mensualidad?", a: "No. Es un servicio prepago: pagás solo lo que enviás." },
         { q: "¿Cómo pago?", a: "Con tarjeta o QR. El saldo se acredita automáticamente al confirmarse el pago." },
