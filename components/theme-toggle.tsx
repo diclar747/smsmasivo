@@ -1,7 +1,7 @@
 "use client";
 import { Moon, Sun } from "lucide-react";
 
-/** Alterna entre modo claro (por defecto) y oscuro; la elección se guarda en el navegador. */
+/** Alterna entre modo claro y oscuro (el sitio público arranca oscuro); la elección se guarda en el navegador. */
 export default function ThemeToggle() {
   function flip() {
     const el = document.documentElement;

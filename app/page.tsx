@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "@/components/plain-link";
-import { ArrowRight, BarChart3, CalendarClock, Check, Code2, MessageCircle, RadioTower, Send, Users, Zap } from "lucide-react";
-import Composer from "@/components/composer";
-import { DashMock, HeroToasts, OperatorCard, ParaguayMap, PhoneMock, WaCard } from "@/components/hero-art";
+import { ArrowRight, BarChart3, BellRing, Check, Code2, Headphones, Lock, Megaphone, Play, Rocket, ShieldCheck, Wallet, Zap } from "lucide-react";
+import ApiTabs from "@/components/api-tabs";
+import CostSim from "@/components/cost-sim";
+import { HeroScene, LaptopMock, OperatorStrip } from "@/components/hero-art";
 import LiveSend from "@/components/live-send";
-import { WhatsAppIcon } from "@/components/icons";
 import LandingSeo from "@/components/landing-seo";
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { getPrice } from "@/lib/price";
@@ -20,36 +20,44 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: TITLE, description: DESC, images: [`${SITE_URL}/og-image.png`] },
 };
 
-const CAPS = [
-  [Send, "Campañas masivas", "Enviá a miles de contactos a la vez, ahora o a la hora que elijas. Pausá, editá o cancelá mientras corre."],
-  [Users, "Contactos sin vueltas", "Pegá números o importá un Excel o CSV. Se validan, se limpian y se eliminan los repetidos."],
-  [CalendarClock, "Mensajes programados", "Dejá lista la campaña del lunes el viernes. Se envía sola en la fecha y hora que definas."],
-  [BarChart3, "Reportes claros", "Qué se envió, qué falló y cuánto gastaste, por fecha y por campaña. Exportable a CSV."],
-  [MessageCircle, "Un toque a WhatsApp", "Sumá un enlace directo para que el cliente te escriba apenas lea el SMS."],
-  [Code2, "API para tu sistema", "Conectá tu CRM, tienda o ERP. Probá cada llamada en línea con tu API Key."],
+const SERVICES = [
+  [Megaphone, "Campañas masivas", "/sms-masivo-paraguay", "c1"], [ShieldCheck, "OTP y autenticaciones", "/sms-otp", "c2"],
+  [BellRing, "Notificaciones instantáneas", "/sms-notificaciones", "c3"], [Wallet, "Cobranzas y recordatorios", "/sms-cobranza", "c4"],
+  [BarChart3, "Marketing digital", "/sms-marketing", "c5"], [Code2, "API para desarrolladores", "/api-sms", "c6"],
+] as const;
+const WHY = [
+  [Zap, "Envío inmediato en todo Paraguay"], [BarChart3, "Estadísticas en tiempo real"], [ShieldCheck, "Seguridad y confiabilidad"], [Headphones, "Soporte cercano por WhatsApp"],
 ] as const;
 
 export default async function Home() {
   const price = await getPrice();
   const pages = seoPages(price);
   const gs = price.toLocaleString("es-PY").replace(/,/g, ".");
-  return <div className="site site-landing">
+  const samples = pages.find(p => p.slug === "api-sms")?.sections.find(s => s.code)?.code ?? [];
+  return <div className="site site-landing site-home">
     <SiteNav active="inicio" />
     <main>
-      <section className="container lh">
-        <div className="lh-copy">
-          <span className="lh-pill"><i className="live-dot" aria-hidden />Plataforma de SMS masivos</span>
-          <h1>Llegá a miles de clientes con <span className="grad">SMS Premium</span></h1>
-          <p className="lead">Enviá campañas masivas a todas las operadoras del Paraguay. Incluí tu enlace de WhatsApp y convertí mensajes en oportunidades.</p>
-          <div className="lh-cta">
-            <Link className="btn btn-primary btn-lg" href="/register"><Send size={18} aria-hidden />Enviar SMS ahora<ArrowRight size={18} aria-hidden /></Link>
-            <Link className="btn btn-outline btn-lg" href="/#soluciones"><BarChart3 size={18} aria-hidden />Conocer servicios</Link>
+      <section className="hx-band">
+        <div className="container hx">
+          <div className="hx-copy">
+            <h1>Tus mensajes.<br /><span className="grad">Todo Paraguay.</span><br />Una sola plataforma.</h1>
+            <p className="lead">SMS masivo para empresas, instituciones y desarrolladores. Enviá campañas, notificá, autenticá y mucho más, de forma rápida y segura.</p>
+            <ul className="hx-feats">
+              <li><Zap size={22} aria-hidden /><span>Envío<br />ultra rápido</span></li>
+              <li><ShieldCheck size={22} aria-hidden /><span>Entrega<br />confiable</span></li>
+              <li><Headphones size={22} aria-hidden /><span>Soporte<br />personalizado</span></li>
+            </ul>
+            <div className="hx-cta">
+              <div className="hx-price"><b>Gs. {gs}</b><small>por SMS</small><span>Sin mensualidad</span></div>
+              <div className="hx-go">
+                <Link className="btn btn-go btn-lg" href="/register"><Rocket size={19} aria-hidden />Comenzar ahora<ArrowRight size={18} aria-hidden /></Link>
+                <small><Check size={14} aria-hidden />Créditos que no vencen</small>
+              </div>
+            </div>
           </div>
-          <div className="ops" aria-label="Operadoras">
-            <OperatorCard name="Tigo" href="/sms-tigo" /><OperatorCard name="Personal" href="/sms-personal" /><OperatorCard name="Claro" href="/sms-claro" /><OperatorCard name="Vox" href="/sms-vox" />
-          </div>
+          <HeroScene />
         </div>
-        <div className="lh-art"><div className="lh-glow" aria-hidden /><DashMock /><PhoneMock /><HeroToasts /><WaCard /><ParaguayMap /></div>
+        <OperatorStrip />
       </section>
 
       <section className="section container ls-section" id="envio-en-vivo" aria-labelledby="ls-title">
@@ -57,76 +65,49 @@ export default async function Home() {
         <LiveSend />
       </section>
 
-      <section className="container benefits reveal-kids" aria-label="Beneficios">
-        <Link href="/sms-masivo-paraguay" className="benefit"><span className="bi b1"><RadioTower size={26} aria-hidden /></span><div><h2>Cobertura nacional</h2><p>Llegá a Tigo, Personal, Claro y Vox desde una sola lista y una sola campaña, en todo el país.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
-        <Link href="/sms-marketing" className="benefit"><span className="bi b2"><Users size={26} aria-hidden /></span><div><h2>Campañas masivas</h2><p>Enviá a miles de contactos, personalizá cada mensaje con su nombre y revisá los resultados en reportes.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
-        <Link href="/sms-whatsapp" className="benefit"><span className="bi b3"><WhatsAppIcon size={26} /></span><div><h2>Enlace a WhatsApp</h2><p>Convertí tus SMS en conversaciones: sumá tu enlace de WhatsApp y recibí consultas de tus clientes.</p></div><i><ArrowRight size={16} aria-hidden /></i></Link>
-      </section>
-
-      <section className="section container" id="probar">
-        <div className="split">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <h2>Probá tu mensaje antes de enviarlo</h2>
-            <p>Cada SMS admite hasta 160 caracteres y cuesta 1 crédito. Escribí acá y mirá cómo lo cuenta la plataforma: te avisa si te pasás y convierte las tildes para que nunca pagues de más.</p>
-            <ul className="checks" style={{ marginTop: 20 }}>
-              <li><Check size={18} aria-hidden />Nunca se envía un mensaje de más de 160 caracteres.</li>
-              <li><Check size={18} aria-hidden />La ñ se conserva; las tildes se envían sin acento.</li>
-              <li><Check size={18} aria-hidden />Sabés el costo exacto antes de enviar.</li>
-            </ul>
-          </div>
-          <Composer price={price} />
+      <section className="container hs-grid" id="servicios" aria-label="Simulador y servicios">
+        <CostSim price={price} />
+        <div className="hs-services reveal">
+          <h2>Nuestros servicios</h2><p>Todo lo que necesitás en una sola plataforma.</p>
+          <div className="svc-grid">{SERVICES.map(([Icon, label, href, c]) => <Link key={href} href={href} className={`svc ${c}`}><Icon size={30} aria-hidden /><span>{label}</span></Link>)}</div>
+        </div>
+        <div className="hs-card pro reveal">
+          <span className="pro-ico"><ShieldCheck size={44} aria-hidden /></span>
+          <h2>Plataforma profesional</h2>
+          <ul>{["Reportes en tiempo real", "Campañas programadas", "Soporte por WhatsApp", "API REST completa", "Créditos que no vencen"].map(t => <li key={t}><Check size={16} aria-hidden />{t}</li>)}</ul>
         </div>
       </section>
 
-      <section className="section container" id="como-funciona">
-        <div className="section-head reveal"><h2>De tu lista al celular en tres pasos</h2><p>Sin instalar nada y sin hablar con nadie.</p></div>
-        <ol className="steps reveal-kids">
-          <li><h3>Cargá tus contactos</h3><p>Pegá los números o subí un archivo. Detectamos los inválidos y los repetidos por vos.</p></li>
-          <li><h3>Escribí el mensaje</h3><p>Usá el nombre de cada cliente y otros datos. El contador te avisa antes de pasarte de 160.</p></li>
-          <li><h3>Enviá o programá</h3><p>Mirá cuántos créditos usa la campaña y lanzala. Seguís el resultado en tiempo real.</p></li>
-        </ol>
-      </section>
-
-      <section className="section container" id="funciones">
-        <div className="section-head reveal"><h2>Lo necesario para comunicarte con tus clientes</h2><p>Pensado para negocios de Paraguay: simple de usar y preciso en el costo.</p></div>
-        <div className="caps reveal-kids">{CAPS.map(([Icon, title, text]) => <div key={title}><h3><Icon size={20} aria-hidden/>{title}</h3><p>{text}</p></div>)}</div>
-      </section>
-
-      <section className="section container" id="api">
-        <div className="split">
-          <div className="section-head" style={{ marginBottom: 0 }}>
-            <h2>Una llamada y el SMS sale</h2>
-            <p>Enviá desde tu aplicación con una API REST. Consultá el saldo, el historial y el estado de tus campañas con la misma clave.</p>
-            <div className="hero-cta"><Link className="btn btn-primary" href="/api-sms">Conocer la API</Link><Link className="btn btn-ghost" href="/docs">Probarla en línea</Link></div>
-          </div>
-          <div>
-            <div className="code"><header><span>POST /api/messages</span><span>cURL</span></header><pre>{`curl -X POST https://smsmasivo.cd.com.py/api/messages \\
-  -H "X-API-Key: sms_TU_CLAVE" \\
-  -H "Content-Type: application/json" \\
-  -d '{"phone":"0981123456",
-       "message":"Tu código es 482915"}'`}</pre></div>
-            <div className="code"><header><span>Respuesta</span><span>201</span></header><pre>{`{ "message": { "status": "aceptado",
-               "segments": 1 } }`}</pre></div>
-          </div>
+      <section className="container hp-grid" id="api" aria-label="Panel y API">
+        <div className="hp-panel reveal">
+          <LaptopMock />
+          <div><h2>Panel de control simple y potente</h2><p>Gestioná tus campañas, consultá reportes y administrá tus contactos de forma fácil y rápida. Exportá el historial a Excel o PDF.</p>
+            <Link className="btn btn-outline-glow" href="/register"><Play size={16} aria-hidden />Probalo gratis</Link></div>
         </div>
+        <div className="hp-api reveal">
+          <ApiTabs samples={samples} />
+          <Link className="api-doc" href="/docs">Ver documentación API <ArrowRight size={15} aria-hidden /></Link>
+        </div>
+        <ul className="hp-checks reveal">{["Integración fácil", "Documentación completa", "Soporte técnico"].map(t => <li key={t}><Check size={16} aria-hidden />{t}</li>)}</ul>
       </section>
 
-      <section className="section price-band" id="precios" style={{ marginTop: 0 }}>
-        <div className="container price-grid">
-          <div className="price-num">Gs. {gs}<small>por SMS, hasta 160 caracteres</small></div>
-          <ul className="checks">
-            <li><Check size={18} aria-hidden/>Comprás los créditos que necesitás, desde 1.000 SMS.</li>
-            <li><Check size={18} aria-hidden/>Los créditos no vencen y no hay mensualidad.</li>
-            <li><Check size={18} aria-hidden/>Pagás con tarjeta o QR y el saldo se acredita solo.</li>
-            <li><Check size={18} aria-hidden/>Si un envío es rechazado, el crédito vuelve a tu saldo.</li>
-          </ul>
-          <Link className="btn btn-primary btn-lg" href="/precios-sms">Ver precios</Link>
+      <section className="container hw-grid" id="como-funciona" aria-label="Por qué elegirnos">
+        <div className="hw-intro reveal"><h2>¿Por qué elegir SMS Masivo?</h2><p>Somos el aliado ideal para tu negocio: tecnología de punta, precio claro y el respaldo de CNID, con gente de acá que te atiende por WhatsApp.</p><Link className="btn btn-outline-glow" href="/sms-masivo-paraguay">Conocé más <ArrowRight size={16} aria-hidden /></Link></div>
+        <ul className="hw-list reveal">{WHY.map(([Icon, t]) => <li key={t}><Icon size={22} aria-hidden /><span>{t}</span></li>)}</ul>
+        <div className="hw-steps reveal"><h2>De tu lista al celular en tres pasos</h2>
+          <ol><li><b>Cargá tus contactos</b><span>Pegá números o subí un Excel; detectamos inválidos y repetidos.</span></li><li><b>Escribí el mensaje</b><span>Personalizalo con el nombre y sumá tu link de WhatsApp.</span></li><li><b>Enviá o programá</b><span>Seguís el resultado en tiempo real y exportás el historial.</span></li></ol></div>
+        <div className="hw-price reveal" id="precios">
+          <span className="hw-price-tag">Precio transparente</span>
+          <b>Gs. {gs}</b><small>por SMS</small>
+          <ul>{["Sin mensualidad", "Sin costos ocultos", "Créditos que no vencen", "Desde 1.000 SMS"].map(t => <li key={t}><Check size={15} aria-hidden />{t}</li>)}</ul>
+          <Link className="btn btn-go" href="/register">Registrarse ahora <ArrowRight size={16} aria-hidden /></Link>
         </div>
       </section>
 
       <LandingSeo pages={pages} price={price} />
 
       <div className="container"><div className="cta-band reveal"><div><h2>Hablemos con tus clientes</h2><p>Creá tu cuenta y mandá tu primera campaña hoy.</p></div><Link className="btn btn-primary btn-lg" href="/register">Crear mi cuenta</Link></div></div>
+      <p className="container hx-secure"><Lock size={14} aria-hidden /> Plataforma segura: conexión cifrada y contraseñas protegidas.</p>
     </main>
     <SiteFooter pages={pages} />
   </div>;

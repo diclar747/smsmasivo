@@ -6,6 +6,7 @@ import "./dash.css";
 import "./site.css";
 import "./landing.css";
 import "./theme-vars.css";
+import "./home.css";
 import { KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -34,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es-PY" data-theme="light" suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("smsmasivo-theme");document.documentElement.dataset.theme=t==="dark"?"dark":"light"}catch(e){}` }} /></head>
+      <head><script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("smsmasivo-theme")}catch(e){}document.documentElement.dataset.theme=t==="dark"||t==="light"?t:location.pathname.indexOf("/panel")===0?"light":"dark"` }} /></head>
       <body className="antialiased">
         {children}
         <a className="wa-float" href="https://wa.me/595994854167?text=Hola%2C%20quiero%20hacer%20una%20consulta%20sobre%20SMS%20Masivo" target="_blank" rel="noopener noreferrer" aria-label="Consultas por WhatsApp sobre SMS Masivo" title="Consultas por WhatsApp">

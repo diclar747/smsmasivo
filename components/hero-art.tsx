@@ -66,3 +66,28 @@ export function HeroToasts() {
     {TOASTS.map(([op, txt], i) => <div key={op} className={`lh-toast t${i}`}><span><Check size={14} /></span><div><b>{txt}</b><small>{op} · hace un instante</small></div></div>)}
   </div>;
 }
+
+/** Escena principal: mujer con el celular de SMS Masivo, panel inclinado detrás y avisos de entrega. */
+export function HeroScene() {
+  return <div className="hx-art">
+    <div className="hx-rings" aria-hidden="true"><i /><i /><i /></div>
+    <div className="hx-dash" aria-hidden="true"><DashMock /></div>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img className="hx-woman" src="/hero-woman.webp" width={560} height={776} alt="Mujer mostrando la aplicación SMS Masivo en su celular" fetchPriority="high" decoding="async" />
+    <HeroToasts />
+  </div>;
+}
+
+const OPERATORS = [["tigo", "Tigo", "/sms-tigo"], ["personal", "Personal", "/sms-personal"], ["claro", "Claro", "/sms-claro"], ["vox", "VOX", "/sms-vox"]] as const;
+/** Franja de cobertura con las operadoras en sus colores (solo nombres, sin logotipos). */
+export function OperatorStrip() {
+  return <section className="container ops-strip" aria-label="Cobertura nacional">
+    <div className="ops-copy"><h2>Cobertura nacional</h2><p>Enviá a todas las operadoras del Paraguay.</p></div>
+    <div className="ops-marks">{OPERATORS.map(([k, label, href]) => <a key={k} href={href} className={`opm opm-${k}`}>{label}</a>)}</div>
+  </section>;
+}
+
+/** Laptop con el panel de ejemplo adentro. */
+export function LaptopMock() {
+  return <div className="laptop" aria-hidden="true"><div className="laptop-screen"><DashMock /></div><div className="laptop-base" /></div>;
+}
