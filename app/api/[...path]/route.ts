@@ -40,6 +40,8 @@ async function sendOne(user: User, rawPhone: unknown, rawMessage: unknown, campa
   if (!phone) throw new HttpError("Número paraguayo inválido");
   const message = smsText(rawMessage);
   if (await first("SELECT id FROM optouts WHERE user_id=? AND phone=?", user.id, phone)) throw new HttpError("El número está en tu lista de exclusión", 422);
+  // Sin el envío real activado no se cobra nada: antes se descontaba el crédito y el SMS quedaba "simulado".
+  if (config.SMS_LIVE !== "true" || !config.WINSAP_SMS_KEY) throw new HttpError("El envío de SMS todavía no está activado. No se descontó saldo.", 503);
   const cost = 1; // el texto ya está garantizado en 1 SMS (<=160 GSM-7)
   const reserve = await db().prepare("UPDATE users SET balance=balance-? WHERE id=? AND balance>=?").bind(cost, user.id, cost).run();
   if (!reserve.meta.changes) throw new HttpError("Saldo insuficiente", 402);
@@ -99,8 +101,8 @@ async function runCampaign(user: User, campaignId: string, sendNow = false) {
         db().prepare("UPDATE campaigns SET sent=sent+1 WHERE id=?").bind(campaignId),
       ]);
     } catch (e) {
-      if (e instanceof HttpError && e.status === 402) {
-        // Sin saldo: devolver el destinatario a la cola y pausar para no marcar toda la campaña como fallida.
+      if (e instanceof HttpError && (e.status === 402 || e.status === 503)) {
+        // Sin saldo o sin envío activado: devolver el destinatario a la cola y pausar para no marcar toda la campaña como fallida.
         await db().batch([
           db().prepare("UPDATE recipients SET status='pending' WHERE id=?").bind(rec.id),
           db().prepare("UPDATE campaigns SET status='paused' WHERE id=?").bind(campaignId),
